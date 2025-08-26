@@ -1,0 +1,112 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Friend } from '../types';
+
+interface FriendCardProps {
+  friend: Friend;
+  onPress?: () => void;
+  showBalance?: boolean;
+  balance?: number;
+}
+
+const FriendCard: React.FC<FriendCardProps> = ({ 
+  friend, 
+  onPress, 
+  showBalance = false, 
+  balance = 0 
+}) => {
+  const getBalanceColor = (balance: number) => {
+    if (balance > 0) return '#4CAF50';
+    if (balance < 0) return '#F44336';
+    return '#757575';
+  };
+
+  const getBalanceText = (balance: number) => {
+    if (balance > 0) return `You owe $${balance.toFixed(2)}`;
+    if (balance < 0) return `Owes you $${Math.abs(balance).toFixed(2)}`;
+    return 'Settled up';
+  };
+
+  return (
+    <TouchableOpacity style={styles.container} onPress={onPress}>
+      <View style={styles.avatarContainer}>
+        {friend.user.avatar ? (
+          <Image source={{ uri: friend.user.avatar }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="person" size={24} color="#757575" />
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.infoContainer}>
+        <Text style={styles.name}>{friend.user.name}</Text>
+        <Text style={styles.email}>{friend.user.email}</Text>
+        {showBalance && (
+          <Text style={[styles.balance, { color: getBalanceColor(balance) }]}>
+            {getBalanceText(balance)}
+          </Text>
+        )}
+      </View>
+      
+      <Ionicons name="chevron-forward" size={20} color="#757575" />
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginVertical: 4,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  avatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoContainer: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  email: {
+    fontSize: 14,
+    color: '#757575',
+    marginBottom: 4,
+  },
+  balance: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});
+
+export default FriendCard;
