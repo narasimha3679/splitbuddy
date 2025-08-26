@@ -1,4 +1,4 @@
-# SplitBuddy - Splitwise Clone
+# SplitBuddy
 
 A modern React Native app built with Expo for splitting bills and expenses with friends and groups.
 
@@ -161,6 +161,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Inspired by Splitwise
 - Built with Expo and React Native
 - Icons from Expo Vector Icons
