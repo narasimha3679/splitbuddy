@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
 
 import HomeScreen from '../screens/HomeScreen';
 import FriendsScreen from '../screens/FriendsScreen';
@@ -13,8 +14,12 @@ import GroupDetailsScreen from '../screens/GroupDetailsScreen';
 import AddBillScreen from '../screens/AddBillScreen';
 import BillDetailsScreen from '../screens/BillDetailsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 import { RootStackParamList } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator<RootStackParamList>();
@@ -112,12 +117,29 @@ const TabNavigator = () => (
   </Tab.Navigator>
 );
 
+const LoadingScreen = () => <LoadingSpinner />;
+
+const AuthStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Register" component={RegisterScreen} />
+  </Stack.Navigator>
+);
+
 const AppNavigator = () => {
+  const { state } = useAuth();
+
+  if (state.isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <NavigationContainer>
-      <TabNavigator />
+      {state.isAuthenticated ? <TabNavigator /> : <AuthStack />}
     </NavigationContainer>
   );
 };
+
+
 
 export default AppNavigator;

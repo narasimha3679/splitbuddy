@@ -11,12 +11,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/calculations';
+import LogoutTest from '../components/LogoutTest';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { state } = useApp();
-  const { currentUser, bills, expenses } = state;
+  const { bills, expenses } = state;
+  const { state: authState, logout } = useAuth();
+  const currentUser = authState.user;
 
   const totalBills = bills.length;
   const totalOwed = expenses
@@ -26,7 +30,7 @@ const ProfileScreen: React.FC = () => {
     .filter(expense => expense.userId !== currentUser?.id && !expense.isPaid)
     .reduce((sum, expense) => sum + expense.amount, 0);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -38,9 +42,15 @@ const ProfileScreen: React.FC = () => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            // Handle logout logic here
-            Alert.alert('Logged out', 'You have been logged out successfully.');
+          onPress: async () => {
+            try {
+              console.log('Logging out...');
+              await logout();
+              console.log('Logout successful');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
           },
         },
       ]
@@ -224,6 +234,9 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.versionSection}>
           <Text style={styles.versionText}>SplitBuddy v1.0.0</Text>
         </View>
+
+        {/* Debug Test Component */}
+        <LogoutTest />
       </ScrollView>
     </SafeAreaView>
   );

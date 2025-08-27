@@ -2,8 +2,30 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  avatar?: string;
   phone?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  message: string;
 }
 
 export interface Friend {
@@ -11,6 +33,19 @@ export interface Friend {
   user: User;
   addedAt: Date;
 }
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+
+export interface FriendRequest {
+  id: string;
+  fromUser: User;
+  toUser: User;
+  status: FriendRequestStatus;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface UserSearchResult extends User {}
 
 export interface Group {
   id: string;
@@ -59,6 +94,8 @@ export interface NavigationProps {
 }
 
 export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
   Home: undefined;
   Friends: undefined;
   Groups: undefined;

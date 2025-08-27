@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { User, Friend, Group, Bill, Expense } from '../types';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { User, Friend, Group, Bill, Expense, FriendRequest } from '../types';
+import { useAuth } from './AuthContext';
 
 interface AppState {
   currentUser: User | null;
@@ -7,28 +8,28 @@ interface AppState {
   groups: Group[];
   bills: Bill[];
   expenses: Expense[];
+  friendRequests: FriendRequest[];
 }
 
 type AppAction =
   | { type: 'SET_CURRENT_USER'; payload: User }
   | { type: 'ADD_FRIEND'; payload: Friend }
   | { type: 'REMOVE_FRIEND'; payload: string }
+  | { type: 'SET_FRIEND_REQUESTS'; payload: FriendRequest[] }
+  | { type: 'ADD_FRIEND_REQUEST'; payload: FriendRequest }
+  | { type: 'UPDATE_FRIEND_REQUEST'; payload: FriendRequest }
   | { type: 'CREATE_GROUP'; payload: Group }
   | { type: 'ADD_BILL'; payload: Bill }
   | { type: 'ADD_EXPENSE'; payload: Expense }
   | { type: 'UPDATE_EXPENSE'; payload: { id: string; updates: Partial<Expense> } };
 
 const initialState: AppState = {
-  currentUser: {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    avatar: 'https://via.placeholder.com/150',
-  },
+  currentUser: null,
   friends: [],
   groups: [],
   bills: [],
   expenses: [],
+  friendRequests: [],
 };
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -37,6 +38,15 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, currentUser: action.payload };
     case 'ADD_FRIEND':
       return { ...state, friends: [...state.friends, action.payload] };
+    case 'SET_FRIEND_REQUESTS':
+      return { ...state, friendRequests: action.payload };
+    case 'ADD_FRIEND_REQUEST':
+      return { ...state, friendRequests: [action.payload, ...state.friendRequests] };
+    case 'UPDATE_FRIEND_REQUEST':
+      return {
+        ...state,
+        friendRequests: state.friendRequests.map(fr => fr.id === action.payload.id ? action.payload : fr),
+      };
     case 'REMOVE_FRIEND':
       return { ...state, friends: state.friends.filter(f => f.id !== action.payload) };
     case 'CREATE_GROUP':
@@ -68,6 +78,17 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const { state: authState } = useAuth();
+
+  // Sync current user with auth state
+  useEffect(() => {
+    if (authState.user) {
+      dispatch({
+        type: 'SET_CURRENT_USER',
+        payload: authState.user as User
+      });
+    }
+  }, [authState.user]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

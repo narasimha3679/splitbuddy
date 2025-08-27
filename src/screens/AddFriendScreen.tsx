@@ -13,55 +13,54 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
-import { Friend, User } from '../types';
-import { generateId } from '../utils/calculations';
+import { User } from '../types';
+import { searchUserByEmail, sendFriendRequest } from '../utils/api';
 
 const AddFriendScreen: React.FC = () => {
   const navigation = useNavigation();
   const { dispatch } = useApp();
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [foundUser, setFoundUser] = useState<User | null>(null);
 
-  const handleAddFriend = () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a name');
+  const handleSearch = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter an email');
       return;
     }
-
-    if (!email.trim() && !phone.trim()) {
-      Alert.alert('Error', 'Please enter either an email or phone number');
-      return;
+    try {
+      setSearching(true);
+      setFoundUser(null);
+      const user = await searchUserByEmail(email.trim());
+      if (!user) {
+        Alert.alert('Not found', 'No user found with that email');
+        return;
+      }
+      setFoundUser(user);
+    } catch (e: any) {
+      Alert.alert('Search failed', e?.message || 'Unable to search user');
+    } finally {
+      setSearching(false);
     }
+  };
 
-    // Create a new user for the friend
-    const newUser: User = {
-      id: generateId(),
-      name: name.trim(),
-      email: email.trim() || '',
-      phone: phone.trim() || undefined,
-    };
-
-    // Create a new friend
-    const newFriend: Friend = {
-      id: generateId(),
-      user: newUser,
-      addedAt: new Date(),
-    };
-
-    // Add friend to the app state
-    dispatch({ type: 'ADD_FRIEND', payload: newFriend });
-
-    Alert.alert(
-      'Success',
-      `${name} has been added as a friend!`,
-      [
+  const handleSendRequest = async () => {
+    if (!foundUser) return;
+    try {
+      setSending(true);
+      await sendFriendRequest(foundUser.id);
+      Alert.alert('Request sent', 'Friend request has been sent.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
         },
-      ]
-    );
+      ]);
+    } catch (e: any) {
+      Alert.alert('Failed', e?.message || 'Could not send friend request');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -80,57 +79,49 @@ const AddFriendScreen: React.FC = () => {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter friend's name"
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Search by Email</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter friend's email"
+              placeholder="friend@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="Enter friend's phone number"
-              keyboardType="phone-pad"
-            />
-          </View>
-
           <TouchableOpacity
-            style={[
-              styles.addButton,
-              (!name.trim() || (!email.trim() && !phone.trim())) && styles.addButtonDisabled,
-            ]}
-            onPress={handleAddFriend}
-            disabled={!name.trim() || (!email.trim() && !phone.trim())}
+            style={[styles.addButton, !email.trim() && styles.addButtonDisabled]}
+            onPress={handleSearch}
+            disabled={!email.trim() || searching}
           >
-            <Ionicons name="person-add" size={20} color="white" />
-            <Text style={styles.addButtonText}>Add Friend</Text>
+            <Ionicons name="search" size={20} color="white" />
+            <Text style={styles.addButtonText}>{searching ? 'Searching...' : 'Search'}</Text>
           </TouchableOpacity>
+
+          {foundUser && (
+            <View style={{ marginTop: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: '500', marginBottom: 8 }}>User found</Text>
+              <View style={{ backgroundColor: 'white', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E0E0E0' }}>
+                <Text style={{ fontSize: 16 }}>{foundUser.name}</Text>
+                <Text style={{ color: '#666', marginTop: 4 }}>{foundUser.email}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.addButton, { marginTop: 16 }, sending && styles.addButtonDisabled]}
+                onPress={handleSendRequest}
+                disabled={sending}
+              >
+                <Ionicons name="person-add" size={20} color="white" />
+                <Text style={styles.addButtonText}>{sending ? 'Sending...' : 'Send Friend Request'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={styles.infoContainer}>
           <Ionicons name="information-circle" size={20} color="#757575" />
-          <Text style={styles.infoText}>
-            You need to provide either an email or phone number to add a friend.
-          </Text>
+          <Text style={styles.infoText}>Search for an existing user by email and send a friend request. Once they accept, they will appear in your friends list.</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
