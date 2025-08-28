@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet } from 'react-native';
 
-import HomeScreen from '../screens/HomeScreen';
+import ActivitiesScreen from '../screens/ActivitiesScreen';
 import FriendsScreen from '../screens/FriendsScreen';
 import FriendRequestsScreen from '../screens/FriendRequestsScreen';
 import GroupsScreen from '../screens/GroupsScreen';
@@ -81,12 +81,12 @@ const TabNavigator = () => (
       tabBarIcon: ({ focused, color, size }) => {
         let iconName: keyof typeof Ionicons.glyphMap;
 
-        if (route.name === 'Home') {
-          iconName = focused ? 'home' : 'home-outline';
-        } else if (route.name === 'FriendsTab') {
+        if (route.name === 'FriendsTab') {
           iconName = focused ? 'people' : 'people-outline';
         } else if (route.name === 'GroupsTab') {
           iconName = focused ? 'folder' : 'folder-outline';
+        } else if (route.name === 'Activities') {
+          iconName = focused ? 'notifications' : 'notifications-outline';
         } else if (route.name === 'Profile') {
           iconName = focused ? 'person' : 'person-outline';
         } else {
@@ -100,11 +100,7 @@ const TabNavigator = () => (
       headerShown: false,
     })}
   >
-    <Tab.Screen
-      name="Home"
-      component={HomeScreen}
-      options={{ title: 'Home' }}
-    />
+
     <Tab.Screen
       name="FriendsTab"
       component={FriendsStack}
@@ -114,6 +110,11 @@ const TabNavigator = () => (
       name="GroupsTab"
       component={GroupsStack}
       options={{ title: 'Groups' }}
+    />
+    <Tab.Screen
+      name="Activities"
+      component={ActivitiesScreen}
+      options={{ title: 'Activities' }}
     />
     <Tab.Screen
       name="Profile"

@@ -1,23 +1,35 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 const LogoutTest: React.FC = () => {
   const { state, logout } = useAuth();
 
-  const handleTestLogout = async () => {
-    console.log('=== LOGOUT TEST START ===');
-    console.log('Current auth state:', state);
-    console.log('User:', state.user);
-    console.log('Token:', state.token);
-    console.log('Is authenticated:', state.isAuthenticated);
-    
-    try {
-      await logout();
-      console.log('=== LOGOUT TEST SUCCESS ===');
-    } catch (error) {
-      console.error('=== LOGOUT TEST FAILED ===', error);
-    }
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Logging out...');
+              await logout();
+              console.log('Logout successful');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -25,7 +37,7 @@ const LogoutTest: React.FC = () => {
       <Text style={styles.title}>Logout Test Component</Text>
       <Text style={styles.info}>User: {state.user?.name || 'None'}</Text>
       <Text style={styles.info}>Authenticated: {state.isAuthenticated ? 'Yes' : 'No'}</Text>
-      <TouchableOpacity style={styles.button} onPress={handleTestLogout}>
+      <TouchableOpacity style={styles.button} onPress={handleLogout}>
         <Text style={styles.buttonText}>Test Logout</Text>
       </TouchableOpacity>
     </View>

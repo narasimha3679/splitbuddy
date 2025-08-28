@@ -14,13 +14,14 @@ import { useApp } from '../context/AppContext';
 import { Group } from '../types';
 import BillCard from '../components/BillCard';
 import FriendCard from '../components/FriendCard';
+import Avatar from '../components/Avatar';
 
 const GroupDetailsScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { state } = useApp();
   const { group } = route.params as { group: Group };
-  
+
   const groupBills = state.bills.filter(bill => bill.groupId === group.id);
   const groupMembers = group.members;
 
@@ -58,7 +59,12 @@ const GroupDetailsScreen: React.FC = () => {
         {/* Group Info */}
         <View style={styles.groupInfo}>
           <View style={styles.groupAvatar}>
-            <Ionicons name="people" size={32} color="#007AFF" />
+            <Avatar
+              name={group.name}
+              size={60}
+              type="group"
+              customAvatar={group.avatar}
+            />
           </View>
           <View style={styles.groupDetails}>
             <Text style={styles.groupName}>{group.name}</Text>
@@ -80,7 +86,7 @@ const GroupDetailsScreen: React.FC = () => {
             <Ionicons name="add-circle" size={24} color="#007AFF" />
             <Text style={styles.quickActionText}>Add Bill</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => {
@@ -98,7 +104,7 @@ const GroupDetailsScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Members</Text>
             <Text style={styles.sectionCount}>{groupMembers.length}</Text>
           </View>
-          
+
           <FlatList
             data={groupMembers}
             renderItem={renderMember}
@@ -114,7 +120,7 @@ const GroupDetailsScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Bills</Text>
             <Text style={styles.sectionCount}>{groupBills.length}</Text>
           </View>
-          
+
           {groupBills.length > 0 ? (
             <FlatList
               data={groupBills}

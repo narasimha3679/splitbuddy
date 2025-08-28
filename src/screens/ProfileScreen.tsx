@@ -14,6 +14,7 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/calculations';
 import LogoutTest from '../components/LogoutTest';
+import Avatar from '../components/Avatar';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,39 +31,12 @@ const ProfileScreen: React.FC = () => {
     .filter(expense => expense.userId !== currentUser?.id && !expense.isPaid)
     .reduce((sum, expense) => sum + expense.amount, 0);
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Logging out...');
-              await logout();
-              console.log('Logout successful');
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const MenuItem = ({ 
-    icon, 
-    title, 
-    subtitle, 
-    onPress, 
-    showArrow = true 
+  const MenuItem = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+    showArrow = true
   }: {
     icon: string;
     title: string;
@@ -86,16 +60,18 @@ const ProfileScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#F44336" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* User Info */}
         <View style={styles.userSection}>
           <View style={styles.userAvatar}>
-            <Ionicons name="person" size={40} color="#007AFF" />
+            <Avatar
+              name={currentUser?.name || 'User'}
+              size={80}
+              type="user"
+              customAvatar={currentUser?.avatar}
+            />
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{currentUser?.name}</Text>
@@ -126,7 +102,7 @@ const ProfileScreen: React.FC = () => {
         {/* Menu Items */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <MenuItem
             icon="person-outline"
             title="Edit Profile"
@@ -135,7 +111,7 @@ const ProfileScreen: React.FC = () => {
               // Navigate to edit profile
             }}
           />
-          
+
           <MenuItem
             icon="notifications-outline"
             title="Notifications"
@@ -144,7 +120,7 @@ const ProfileScreen: React.FC = () => {
               // Navigate to notifications settings
             }}
           />
-          
+
           <MenuItem
             icon="lock-closed-outline"
             title="Privacy & Security"
@@ -157,7 +133,7 @@ const ProfileScreen: React.FC = () => {
 
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>App</Text>
-          
+
           <MenuItem
             icon="help-circle-outline"
             title="Help & Support"
@@ -166,7 +142,7 @@ const ProfileScreen: React.FC = () => {
               // Navigate to help
             }}
           />
-          
+
           <MenuItem
             icon="document-text-outline"
             title="Terms of Service"
@@ -174,7 +150,7 @@ const ProfileScreen: React.FC = () => {
               // Navigate to terms
             }}
           />
-          
+
           <MenuItem
             icon="shield-checkmark-outline"
             title="Privacy Policy"
@@ -182,7 +158,7 @@ const ProfileScreen: React.FC = () => {
               // Navigate to privacy policy
             }}
           />
-          
+
           <MenuItem
             icon="information-circle-outline"
             title="About"
@@ -195,7 +171,7 @@ const ProfileScreen: React.FC = () => {
 
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>Data</Text>
-          
+
           <MenuItem
             icon="download-outline"
             title="Export Data"
@@ -204,7 +180,7 @@ const ProfileScreen: React.FC = () => {
               // Handle data export
             }}
           />
-          
+
           <MenuItem
             icon="trash-outline"
             title="Delete Account"
@@ -257,6 +233,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   title: {
+    paddingTop: 20,
     fontSize: 24,
     fontWeight: '700',
     color: '#333',

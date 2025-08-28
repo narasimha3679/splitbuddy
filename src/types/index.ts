@@ -53,8 +53,8 @@ export interface Group {
   name: string;
   description?: string;
   members: User[];
-  createdBy: string;
-  createdAt: Date;
+  createdBy: User;
+  createdAt?: Date;
   avatar?: string;
 }
 
@@ -97,7 +97,7 @@ export interface NavigationProps {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  Home: undefined;
+  Activities: undefined;
   Friends: undefined;
   Groups: undefined;
   AddFriend: undefined;

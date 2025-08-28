@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,21 +6,56 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import GroupCard from '../components/GroupCard';
+import { getMyGroups } from '../utils/api';
 
 const GroupsScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const { groups } = state;
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const loadGroups = async () => {
+    try {
+      setLoading(true);
+      const groupsData = await getMyGroups();
+      dispatch({ type: 'SET_GROUPS', payload: groupsData });
+    } catch (error) {
+      console.error('Failed to load groups:', error);
+      Alert.alert('Error', 'Failed to load groups. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadGroups();
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  // Refresh groups when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadGroups();
+    }, [])
+  );
 
   const renderGroup = ({ item }: { item: any }) => (
     <GroupCard
       group={item}
-      onPress={() => navigation.navigate('GroupDetails' as any, { group: item })}
+      onPress={() => (navigation as any).navigate('GroupDetails', { group: item })}
     />
   );
 
@@ -33,7 +68,7 @@ const GroupsScreen: React.FC = () => {
       </Text>
       <TouchableOpacity
         style={styles.createGroupButton}
-        onPress={() => navigation.navigate('CreateGroup' as any)}
+        onPress={() => (navigation as any).navigate('CreateGroup')}
       >
         <Ionicons name="add-circle" size={20} color="white" />
         <Text style={styles.createGroupButtonText}>Create Group</Text>
@@ -47,24 +82,32 @@ const GroupsScreen: React.FC = () => {
         <Text style={styles.title}>Groups</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('CreateGroup' as any)}
+          onPress={() => (navigation as any).navigate('CreateGroup')}
         >
           <Ionicons name="add" size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
-      {groups.length > 0 ? (
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="refresh" size={32} color="#007AFF" />
+          <Text style={styles.loadingText}>Loading groups...</Text>
+        </View>
+      ) : groups.length > 0 ? (
         <FlatList
           data={groups}
           renderItem={renderGroup}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       ) : (
         renderEmptyState()
       )}
-    </SafeAreaView>
+    </SafeAreaView >
   );
 };
 
@@ -130,6 +173,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#757575',
+    marginTop: 12,
   },
 });
 

@@ -20,6 +20,7 @@ type AppAction =
   | { type: 'ADD_FRIEND_REQUEST'; payload: FriendRequest }
   | { type: 'UPDATE_FRIEND_REQUEST'; payload: FriendRequest }
   | { type: 'REMOVE_FRIEND_REQUEST'; payload: string }
+  | { type: 'SET_GROUPS'; payload: Group[] }
   | { type: 'CREATE_GROUP'; payload: Group }
   | { type: 'ADD_BILL'; payload: Bill }
   | { type: 'ADD_EXPENSE'; payload: Expense }
@@ -58,6 +59,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       };
     case 'REMOVE_FRIEND':
       return { ...state, friends: state.friends.filter(f => f.id !== action.payload) };
+    case 'SET_GROUPS':
+      return { ...state, groups: action.payload };
     case 'CREATE_GROUP':
       return { ...state, groups: [...state.groups, action.payload] };
     case 'ADD_BILL':

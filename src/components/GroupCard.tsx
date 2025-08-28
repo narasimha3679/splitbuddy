@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Group } from '../types';
+import Avatar from './Avatar';
 
 interface GroupCardProps {
   group: Group;
@@ -9,23 +10,22 @@ interface GroupCardProps {
   showMemberCount?: boolean;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({ 
-  group, 
-  onPress, 
-  showMemberCount = true 
+const GroupCard: React.FC<GroupCardProps> = ({
+  group,
+  onPress,
+  showMemberCount = true
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.avatarContainer}>
-        {group.avatar ? (
-          <Image source={{ uri: group.avatar }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="people" size={24} color="#757575" />
-          </View>
-        )}
+        <Avatar
+          name={group.name}
+          size={50}
+          type="group"
+          customAvatar={group.avatar}
+        />
       </View>
-      
+
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{group.name}</Text>
         {group.description && (
@@ -39,7 +39,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
           </Text>
         )}
       </View>
-      
+
       <Ionicons name="chevron-forward" size={20} color="#757575" />
     </TouchableOpacity>
   );

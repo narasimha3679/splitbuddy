@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,19 +13,22 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
-import { Group, User } from '../types';
+import { Group, User, Friend } from '../types';
 import { generateId } from '../utils/calculations';
+import { createGroup, getFriends } from '../utils/api';
 
 const CreateGroupScreen: React.FC = () => {
   const navigation = useNavigation();
   const { state, dispatch } = useApp();
-  const { friends, currentUser } = state;
-  
-  const [groupName, setGroupName] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const { currentUser } = state;
 
-  const handleCreateGroup = () => {
+  const [groupName, setGroupName] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(true);
+
+  const handleCreateGroup = async () => {
     if (!groupName.trim()) {
       Alert.alert('Error', 'Please enter a group name');
       return;
@@ -36,42 +39,56 @@ const CreateGroupScreen: React.FC = () => {
       return;
     }
 
-    // Get selected member users
-    const memberUsers: User[] = selectedMembers.map(memberId => {
-      const friend = friends.find(f => f.user.id === memberId);
-      return friend ? friend.user : currentUser!;
-    });
+    try {
+      setIsCreating(true);
+      // Create group using backend API
+      const newGroup = await createGroup(groupName.trim(), selectedMembers);
 
-    // Add current user to members if not already included
-    if (!selectedMembers.includes(currentUser?.id || '')) {
-      memberUsers.push(currentUser!);
+      // Add to local state
+      dispatch({ type: 'CREATE_GROUP', payload: newGroup });
+
+      Alert.alert(
+        'Success',
+        `Group "${groupName}" has been created!`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate back to Groups screen
+              (navigation as any).navigate('Groups');
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to create group:', error);
+      Alert.alert('Error', 'Failed to create group. Please try again.');
+    } finally {
+      setIsCreating(false);
     }
-
-    const newGroup: Group = {
-      id: generateId(),
-      name: groupName.trim(),
-      description: description.trim() || undefined,
-      members: memberUsers,
-      createdBy: currentUser?.id || '',
-      createdAt: new Date(),
-    };
-
-    dispatch({ type: 'CREATE_GROUP', payload: newGroup });
-
-    Alert.alert(
-      'Success',
-      `Group "${groupName}" has been created!`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
-    );
   };
 
+  const loadFriends = async () => {
+    try {
+      setLoadingFriends(true);
+      if (currentUser) {
+        const friendsData = await getFriends(currentUser.id);
+        setFriends(friendsData);
+      }
+    } catch (error) {
+      console.error('Failed to load friends:', error);
+      Alert.alert('Error', 'Failed to load friends. Please try again.');
+    } finally {
+      setLoadingFriends(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFriends();
+  }, [currentUser]);
+
   const toggleMemberSelection = (memberId: string) => {
-    setSelectedMembers(prev => 
+    setSelectedMembers(prev =>
       prev.includes(memberId)
         ? prev.filter(id => id !== memberId)
         : [...prev, memberId]
@@ -80,7 +97,7 @@ const CreateGroupScreen: React.FC = () => {
 
   const renderMember = ({ item }: { item: any }) => {
     const isSelected = selectedMembers.includes(item.user.id);
-    
+
     return (
       <TouchableOpacity
         style={[styles.memberItem, isSelected && styles.memberItemSelected]}
@@ -120,25 +137,20 @@ const CreateGroupScreen: React.FC = () => {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Enter group description (optional)"
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+
 
           <View style={styles.membersSection}>
             <Text style={styles.label}>Select Members *</Text>
             <Text style={styles.membersSubtitle}>
               Choose friends to add to this group
             </Text>
-            
-            {friends.length > 0 ? (
+
+            {loadingFriends ? (
+              <View style={styles.loadingContainer}>
+                <Ionicons name="refresh" size={32} color="#007AFF" />
+                <Text style={styles.loadingText}>Loading friends...</Text>
+              </View>
+            ) : friends.length > 0 ? (
               <FlatList
                 data={friends}
                 renderItem={renderMember}
@@ -155,7 +167,7 @@ const CreateGroupScreen: React.FC = () => {
                 </Text>
                 <TouchableOpacity
                   style={styles.addFriendsButton}
-                  onPress={() => navigation.navigate('AddFriend' as any)}
+                  onPress={() => (navigation as any).navigate('AddFriend')}
                 >
                   <Text style={styles.addFriendsButtonText}>Add Friends</Text>
                 </TouchableOpacity>
@@ -166,13 +178,22 @@ const CreateGroupScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.createButton,
-              (!groupName.trim() || selectedMembers.length === 0) && styles.createButtonDisabled,
+              (!groupName.trim() || selectedMembers.length === 0 || isCreating) && styles.createButtonDisabled,
             ]}
             onPress={handleCreateGroup}
-            disabled={!groupName.trim() || selectedMembers.length === 0}
+            disabled={!groupName.trim() || selectedMembers.length === 0 || isCreating}
           >
-            <Ionicons name="add-circle" size={20} color="white" />
-            <Text style={styles.createButtonText}>Create Group</Text>
+            {isCreating ? (
+              <>
+                <Ionicons name="refresh" size={20} color="white" />
+                <Text style={styles.createButtonText}>Creating...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="add-circle" size={20} color="white" />
+                <Text style={styles.createButtonText}>Create Group</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -222,10 +243,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
   },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
+
   membersSection: {
     marginBottom: 20,
   },
@@ -325,6 +343,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#757575',
+    marginTop: 12,
   },
 });
 

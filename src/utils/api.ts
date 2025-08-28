@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { LoginCredentials, RegisterCredentials, AuthResponse, AuthUser, User, FriendRequest, Friend } from '../types';
+import { LoginCredentials, RegisterCredentials, AuthResponse, AuthUser, User, FriendRequest, Friend, Group } from '../types';
 
 
 // Try IP address first, fallback to localhost
@@ -403,4 +403,44 @@ export const declineFriendRequest = async (requestId: string): Promise<FriendReq
 
   const updated: FriendRequest = await response.json();
   return updated;
+};
+
+// Groups API functions
+export const createGroup = async (name: string, memberIds: string[]): Promise<Group> => {
+  const baseUrl = await getApiBaseUrl();
+  console.log('API: Creating group with name:', name, 'and memberIds:', memberIds);
+
+  const response = await authenticatedFetch(`${baseUrl}/groups`, {
+    method: 'POST',
+    body: JSON.stringify({ name, memberIds }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.log('API: Create group error:', error);
+    throw new Error(error.message || 'Failed to create group');
+  }
+
+  const group: Group = await response.json();
+  console.log('API: Group created successfully:', group);
+  return group;
+};
+
+export const getMyGroups = async (): Promise<Group[]> => {
+  const baseUrl = await getApiBaseUrl();
+  console.log('API: Getting my groups');
+
+  const response = await authenticatedFetch(`${baseUrl}/groups/me`, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.log('API: Get my groups error:', error);
+    throw new Error(error.message || 'Failed to get groups');
+  }
+
+  const groups: Group[] = await response.json();
+  console.log('API: Groups retrieved successfully:', groups);
+  return groups;
 };

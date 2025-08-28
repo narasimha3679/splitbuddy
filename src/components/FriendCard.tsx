@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Friend } from '../types';
+import Avatar from './Avatar';
 
 interface FriendCardProps {
   friend: Friend;
@@ -34,13 +35,12 @@ const FriendCard: React.FC<FriendCardProps> = ({
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.avatarContainer}>
-        {user.avatar ? (
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={24} color="#757575" />
-          </View>
-        )}
+        <Avatar
+          name={user.name}
+          size={50}
+          type="user"
+          customAvatar={user.avatar}
+        />
       </View>
 
       <View style={styles.infoContainer}>

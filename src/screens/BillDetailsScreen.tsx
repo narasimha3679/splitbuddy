@@ -13,15 +13,16 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { Bill } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import Avatar from '../components/Avatar';
 
 const BillDetailsScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { state } = useApp();
   const { bill } = route.params as { bill: Bill };
-  
+
   const billExpenses = state.expenses.filter(expense => expense.billId === bill.id);
-  const paidByUser = state.currentUser?.id === bill.paidBy ? state.currentUser : 
+  const paidByUser = state.currentUser?.id === bill.paidBy ? state.currentUser :
     state.friends.find(f => f.user.id === bill.paidBy)?.user;
 
   const getCategoryIcon = (category: string) => {
@@ -44,14 +45,19 @@ const BillDetailsScreen: React.FC = () => {
   const renderExpense = ({ item }: { item: any }) => {
     const user = state.currentUser?.id === item.userId ? state.currentUser :
       state.friends.find(f => f.user.id === item.userId)?.user;
-    
+
     if (!user) return null;
 
     return (
       <View style={styles.expenseItem}>
         <View style={styles.expenseUser}>
           <View style={styles.userAvatar}>
-            <Ionicons name="person" size={20} color="#757575" />
+            <Avatar
+              name={user.name}
+              size={40}
+              type="user"
+              customAvatar={user.avatar}
+            />
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user.name}</Text>
@@ -84,10 +90,10 @@ const BillDetailsScreen: React.FC = () => {
         {/* Bill Info */}
         <View style={styles.billInfo}>
           <View style={styles.billIcon}>
-            <Ionicons 
-              name={getCategoryIcon(bill.category) as any} 
-              size={32} 
-              color="#007AFF" 
+            <Ionicons
+              name={getCategoryIcon(bill.category) as any}
+              size={32}
+              color="#007AFF"
             />
           </View>
           <View style={styles.billDetails}>
@@ -134,7 +140,7 @@ const BillDetailsScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Split Breakdown</Text>
             <Text style={styles.sectionCount}>{billExpenses.length} participants</Text>
           </View>
-          
+
           <View style={styles.expensesList}>
             <FlatList
               data={billExpenses}
