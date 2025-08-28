@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { LoginCredentials, RegisterCredentials, AuthResponse, AuthUser, User, FriendRequest } from '../types';
+import { LoginCredentials, RegisterCredentials, AuthResponse, AuthUser, User, FriendRequest, Friend } from '../types';
 
 
 // Try IP address first, fallback to localhost
@@ -93,16 +93,28 @@ export const storeUser = async (user: any): Promise<void> => {
 export const getUser = async (): Promise<any | null> => {
   try {
     if (Platform.OS === 'web') {
-      const userStr = webStorage.user || localStorage.getItem(USER_KEY);
+      // Check if webStorage.user is already an object
+      if (webStorage.user) {
+        console.log('API: getUser - returning webStorage.user:', webStorage.user);
+        return webStorage.user;
+      }
+      const userStr = localStorage.getItem(USER_KEY);
+      console.log('API: getUser - localStorage userStr:', userStr);
       return userStr ? JSON.parse(userStr) : null;
     } else {
       const userStr = await SecureStore.getItemAsync(USER_KEY);
+      console.log('API: getUser - SecureStore userStr:', userStr);
       return userStr ? JSON.parse(userStr) : null;
     }
   } catch (error) {
     console.warn('Failed to get user:', error);
     // Fallback to web storage
-    const userStr = webStorage.user || (typeof localStorage !== 'undefined' ? localStorage.getItem(USER_KEY) : null);
+    if (webStorage.user) {
+      console.log('API: getUser - fallback webStorage.user:', webStorage.user);
+      return webStorage.user;
+    }
+    const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem(USER_KEY) : null;
+    console.log('API: getUser - fallback localStorage userStr:', userStr);
     return userStr ? JSON.parse(userStr) : null;
   }
 };
@@ -148,12 +160,12 @@ const getApiBaseUrl = async (): Promise<string> => {
   if (await testApiConnection(API_BASE_URL)) {
     return API_BASE_URL;
   }
-  
+
   // Fallback to localhost
   if (await testApiConnection(FALLBACK_API_BASE_URL)) {
     return FALLBACK_API_BASE_URL;
   }
-  
+
   // If neither works, default to IP address (will show proper error)
   return API_BASE_URL;
 };
@@ -162,7 +174,7 @@ const getApiBaseUrl = async (): Promise<string> => {
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   const baseUrl = await getApiBaseUrl();
   console.log('Attempting login with baseUrl:', baseUrl);
-  
+
   try {
     const response = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
@@ -223,7 +235,7 @@ export const logout = async (): Promise<void> => {
 export const getCurrentUser = async (): Promise<AuthUser> => {
   const baseUrl = await getApiBaseUrl();
   const response = await authenticatedFetch(`${baseUrl}/auth/me`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to get user data');
   }
@@ -235,7 +247,7 @@ export const getCurrentUser = async (): Promise<AuthUser> => {
 // Authenticated API requests
 export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   const token = await getToken();
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -260,7 +272,7 @@ export const searchUserByEmail = async (email: string): Promise<User | null> => 
   const baseUrl = await getApiBaseUrl();
   console.log('API: Searching for user with email:', email);
   console.log('API: Using base URL:', baseUrl);
-  
+
   const response = await authenticatedFetch(`${baseUrl}/users/search?email=${encodeURIComponent(email)}`, {
     method: 'GET',
   });
@@ -283,11 +295,73 @@ export const searchUserByEmail = async (email: string): Promise<User | null> => 
   return user;
 };
 
-export const sendFriendRequest = async (toUserId: string): Promise<FriendRequest> => {
+// Get friends list
+export const getFriends = async (userId: string): Promise<Friend[]> => {
+  const baseUrl = await getApiBaseUrl();
+  console.log('API: Getting friends for user:', userId);
+  console.log('API: Using URL:', `${baseUrl}/friends/${userId}/friends`);
+
+  const response = await authenticatedFetch(`${baseUrl}/friends/${userId}/friends`, {
+    method: 'GET',
+  });
+
+  console.log('API: Friends response status:', response.status);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.log('API: Friends error:', error);
+    throw new Error(error.message || 'Failed to get friends');
+  }
+
+  const friendsData = await response.json();
+  console.log('API: Friends raw response:', JSON.stringify(friendsData, null, 2));
+
+  // Transform the response to match the Friend type structure
+  const friends: Friend[] = friendsData.map((user: any) => ({
+    id: user.id,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar
+    },
+    addedAt: new Date() // Since the API doesn't provide addedAt, we'll use current date
+  }));
+
+  console.log('API: Transformed friends:', JSON.stringify(friends, null, 2));
+  return friends;
+};
+
+// Get pending friend requests
+export const getPendingFriendRequests = async (userId: string): Promise<FriendRequest[]> => {
+  const baseUrl = await getApiBaseUrl();
+  console.log('API: Getting pending friend requests for user:', userId);
+  console.log('API: Using URL:', `${baseUrl}/friends/${userId}/pending-requests`);
+
+  const response = await authenticatedFetch(`${baseUrl}/friends/${userId}/pending-requests`, {
+    method: 'GET',
+  });
+
+  console.log('API: Pending requests response status:', response.status);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.log('API: Pending requests error:', error);
+    throw new Error(error.message || 'Failed to get pending requests');
+  }
+
+  const requests: FriendRequest[] = await response.json();
+  console.log('API: Pending requests response:', JSON.stringify(requests, null, 2));
+  return requests;
+};
+
+// Send friend request
+export const sendFriendRequest = async (senderId: string, receiverId: string): Promise<FriendRequest> => {
   const baseUrl = await getApiBaseUrl();
   const response = await authenticatedFetch(`${baseUrl}/friends/requests`, {
     method: 'POST',
-    body: JSON.stringify({ toUserId }),
+    body: JSON.stringify({ senderId, receiverId }),
   });
 
   if (!response.ok) {
@@ -299,16 +373,32 @@ export const sendFriendRequest = async (toUserId: string): Promise<FriendRequest
   return request;
 };
 
-export const respondToFriendRequest = async (requestId: string, accept: boolean): Promise<FriendRequest> => {
+// Accept friend request
+export const acceptFriendRequest = async (requestId: string): Promise<FriendRequest> => {
   const baseUrl = await getApiBaseUrl();
-  const response = await authenticatedFetch(`${baseUrl}/friends/requests/${requestId}`, {
+  const response = await authenticatedFetch(`${baseUrl}/friends/requests/${requestId}?response=ACCEPTED`, {
     method: 'PUT',
-    body: JSON.stringify({ action: accept ? 'accept' : 'decline' }),
   });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to respond to friend request');
+    throw new Error(error.message || 'Failed to accept friend request');
+  }
+
+  const updated: FriendRequest = await response.json();
+  return updated;
+};
+
+// Decline friend request
+export const declineFriendRequest = async (requestId: string): Promise<FriendRequest> => {
+  const baseUrl = await getApiBaseUrl();
+  const response = await authenticatedFetch(`${baseUrl}/friends/requests/${requestId}?response=REJECTED`, {
+    method: 'PUT',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to decline friend request');
   }
 
   const updated: FriendRequest = await response.json();

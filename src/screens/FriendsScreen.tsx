@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,26 +6,81 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
 import { getTotalOwed, formatCurrency } from '../utils/calculations';
 import FriendCard from '../components/FriendCard';
+import { getFriends, getPendingFriendRequests, getUser } from '../utils/api';
+
+type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const FriendsScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const { state } = useApp();
+  const navigation = useNavigation<FriendsScreenNavigationProp>();
+  const { state, dispatch } = useApp();
   const { friends, expenses } = state;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadFriends = async () => {
+    try {
+      const currentUser = await getUser();
+      if (!currentUser) {
+        Alert.alert('Error', 'User not found');
+        return;
+      }
+
+      console.log('FriendsScreen: Loading friends for user:', currentUser.id);
+      const friendsList = await getFriends(currentUser.id);
+      console.log('FriendsScreen: Received friends list:', friendsList.length, 'friends');
+      console.log('FriendsScreen: Friends data:', JSON.stringify(friendsList, null, 2));
+
+      dispatch({ type: 'SET_FRIENDS', payload: friendsList });
+    } catch (error: any) {
+      console.error('FriendsScreen: Error loading friends:', error);
+      Alert.alert('Error', error.message || 'Failed to load friends');
+    }
+  };
+
+  const loadPendingRequests = async () => {
+    try {
+      const currentUser = await getUser();
+      if (!currentUser) return;
+
+      const requests = await getPendingFriendRequests(currentUser.id);
+      console.log('FriendsScreen - Friend requests loaded:', requests.length);
+      dispatch({ type: 'SET_FRIEND_REQUESTS', payload: requests });
+    } catch (error: any) {
+      console.error('Failed to load pending requests:', error);
+      // Don't show alert here as it's not critical for the main screen
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadFriends(), loadPendingRequests()]);
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    loadFriends();
+    loadPendingRequests();
+  }, []);
 
   const getFriendBalance = (friendId: string) => {
-    const friendExpenses = expenses.filter(expense => 
-      expense.userId === friendId || 
-      (expense.billId && state.bills.find(bill => 
+    if (!friendId) return 0;
+
+    const friendExpenses = expenses.filter(expense =>
+      expense.userId === friendId ||
+      (expense.billId && state.bills.find(bill =>
         bill.id === expense.billId && bill.paidBy === friendId
       ))
     );
-    
+
     let balance = 0;
     friendExpenses.forEach(expense => {
       const bill = state.bills.find(b => b.id === expense.billId);
@@ -37,13 +92,28 @@ const FriendsScreen: React.FC = () => {
         }
       }
     });
-    
+
     return balance;
   };
 
   const renderFriend = ({ item }: { item: any }) => {
-    const balance = getFriendBalance(item.user.id);
-    
+    console.log('Rendering friend item:', JSON.stringify(item, null, 2));
+
+    // Handle case where user property might not exist
+    if (!item) {
+      console.warn('Friend item is null or undefined:', item);
+      return null;
+    }
+
+    // Handle both old format (direct user object) and new format (nested user object)
+    const user = item.user || item;
+    if (!user || !user.id) {
+      console.warn('Friend item missing user data:', item);
+      return null;
+    }
+
+    const balance = getFriendBalance(user.id);
+
     return (
       <FriendCard
         friend={item}
@@ -65,7 +135,7 @@ const FriendsScreen: React.FC = () => {
       </Text>
       <TouchableOpacity
         style={styles.addFriendButton}
-        onPress={() => navigation.navigate('AddFriend' as any)}
+        onPress={() => navigation.navigate('AddFriend')}
       >
         <Ionicons name="person-add" size={20} color="white" />
         <Text style={styles.addFriendButtonText}>Add Friend</Text>
@@ -77,12 +147,23 @@ const FriendsScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Friends</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddFriend' as any)}
-        >
-          <Ionicons name="add" size={24} color="#007AFF" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          {state.friendRequests.length > 0 && (
+            <TouchableOpacity
+              style={styles.requestsButton}
+              onPress={() => navigation.navigate('FriendRequests')}
+            >
+              <Ionicons name="mail" size={20} color="#007AFF" />
+              <Text style={styles.requestsButtonText}>{state.friendRequests.length}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('AddFriend')}
+          >
+            <Ionicons name="add" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {friends.length > 0 ? (
@@ -92,6 +173,9 @@ const FriendsScreen: React.FC = () => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       ) : (
         renderEmptyState()
@@ -118,6 +202,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#333',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  requestsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+  },
+  requestsButtonText: {
+    color: '#E65100',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   addButton: {
     width: 40,

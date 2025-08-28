@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
-import { searchUserByEmail, sendFriendRequest } from '../utils/api';
+import { searchUserByEmail, sendFriendRequest, getUser } from '../utils/api';
 
 const AddFriendScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -49,7 +49,12 @@ const AddFriendScreen: React.FC = () => {
     if (!foundUser) return;
     try {
       setSending(true);
-      await sendFriendRequest(foundUser.id);
+      const currentUser = await getUser();
+      if (!currentUser) {
+        Alert.alert('Error', 'User not found');
+        return;
+      }
+      await sendFriendRequest(currentUser.id, foundUser.id);
       Alert.alert('Request sent', 'Friend request has been sent.', [
         {
           text: 'OK',

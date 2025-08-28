@@ -13,11 +13,13 @@ interface AppState {
 
 type AppAction =
   | { type: 'SET_CURRENT_USER'; payload: User }
+  | { type: 'SET_FRIENDS'; payload: Friend[] }
   | { type: 'ADD_FRIEND'; payload: Friend }
   | { type: 'REMOVE_FRIEND'; payload: string }
   | { type: 'SET_FRIEND_REQUESTS'; payload: FriendRequest[] }
   | { type: 'ADD_FRIEND_REQUEST'; payload: FriendRequest }
   | { type: 'UPDATE_FRIEND_REQUEST'; payload: FriendRequest }
+  | { type: 'REMOVE_FRIEND_REQUEST'; payload: string }
   | { type: 'CREATE_GROUP'; payload: Group }
   | { type: 'ADD_BILL'; payload: Bill }
   | { type: 'ADD_EXPENSE'; payload: Expense }
@@ -36,6 +38,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_CURRENT_USER':
       return { ...state, currentUser: action.payload };
+    case 'SET_FRIENDS':
+      return { ...state, friends: action.payload };
     case 'ADD_FRIEND':
       return { ...state, friends: [...state.friends, action.payload] };
     case 'SET_FRIEND_REQUESTS':
@@ -46,6 +50,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return {
         ...state,
         friendRequests: state.friendRequests.map(fr => fr.id === action.payload.id ? action.payload : fr),
+      };
+    case 'REMOVE_FRIEND_REQUEST':
+      return {
+        ...state,
+        friendRequests: state.friendRequests.filter(fr => fr.id !== action.payload),
       };
     case 'REMOVE_FRIEND':
       return { ...state, friends: state.friends.filter(f => f.id !== action.payload) };

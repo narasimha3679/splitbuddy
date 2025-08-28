@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
+  avatar?: string;
 }
 
 export interface AuthUser {
@@ -10,6 +11,7 @@ export interface AuthUser {
   name: string;
   email: string;
   phone?: string;
+  avatar?: string;
 }
 
 export interface LoginCredentials {
@@ -34,18 +36,17 @@ export interface Friend {
   addedAt: Date;
 }
 
-export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+export type FriendRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
 
 export interface FriendRequest {
   id: string;
-  fromUser: User;
-  toUser: User;
   status: FriendRequestStatus;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt?: string;
+  sender?: User;
+  receiver?: User;
 }
 
-export interface UserSearchResult extends User {}
+export interface UserSearchResult extends User { }
 
 export interface Group {
   id: string;
@@ -100,6 +101,7 @@ export type RootStackParamList = {
   Friends: undefined;
   Groups: undefined;
   AddFriend: undefined;
+  FriendRequests: undefined;
   CreateGroup: undefined;
   GroupDetails: { group: Group };
   AddBill: { groupId?: string; friends?: string[] };

@@ -7,6 +7,7 @@ import { View, StyleSheet } from 'react-native';
 
 import HomeScreen from '../screens/HomeScreen';
 import FriendsScreen from '../screens/FriendsScreen';
+import FriendRequestsScreen from '../screens/FriendRequestsScreen';
 import GroupsScreen from '../screens/GroupsScreen';
 import AddFriendScreen from '../screens/AddFriendScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
@@ -26,43 +27,48 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 const FriendsStack = () => (
   <Stack.Navigator>
-    <Stack.Screen 
-      name="Friends" 
+    <Stack.Screen
+      name="Friends"
       component={FriendsScreen}
       options={{ title: 'Friends' }}
     />
-    <Stack.Screen 
-      name="AddFriend" 
+    <Stack.Screen
+      name="AddFriend"
       component={AddFriendScreen}
       options={{ title: 'Add Friend' }}
+    />
+    <Stack.Screen
+      name="FriendRequests"
+      component={FriendRequestsScreen}
+      options={{ title: 'Friend Requests' }}
     />
   </Stack.Navigator>
 );
 
 const GroupsStack = () => (
   <Stack.Navigator>
-    <Stack.Screen 
-      name="Groups" 
+    <Stack.Screen
+      name="Groups"
       component={GroupsScreen}
       options={{ title: 'Groups' }}
     />
-    <Stack.Screen 
-      name="CreateGroup" 
+    <Stack.Screen
+      name="CreateGroup"
       component={CreateGroupScreen}
       options={{ title: 'Create Group' }}
     />
-    <Stack.Screen 
-      name="GroupDetails" 
+    <Stack.Screen
+      name="GroupDetails"
       component={GroupDetailsScreen}
       options={{ title: 'Group Details' }}
     />
-    <Stack.Screen 
-      name="AddBill" 
+    <Stack.Screen
+      name="AddBill"
       component={AddBillScreen}
       options={{ title: 'Add Bill' }}
     />
-    <Stack.Screen 
-      name="BillDetails" 
+    <Stack.Screen
+      name="BillDetails"
       component={BillDetailsScreen}
       options={{ title: 'Bill Details' }}
     />
@@ -94,23 +100,23 @@ const TabNavigator = () => (
       headerShown: false,
     })}
   >
-    <Tab.Screen 
-      name="Home" 
+    <Tab.Screen
+      name="Home"
       component={HomeScreen}
       options={{ title: 'Home' }}
     />
-    <Tab.Screen 
-      name="FriendsTab" 
+    <Tab.Screen
+      name="FriendsTab"
       component={FriendsStack}
       options={{ title: 'Friends' }}
     />
-    <Tab.Screen 
-      name="GroupsTab" 
+    <Tab.Screen
+      name="GroupsTab"
       component={GroupsStack}
       options={{ title: 'Groups' }}
     />
-    <Tab.Screen 
-      name="Profile" 
+    <Tab.Screen
+      name="Profile"
       component={ProfileScreen}
       options={{ title: 'Profile' }}
     />

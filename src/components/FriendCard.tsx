@@ -10,11 +10,11 @@ interface FriendCardProps {
   balance?: number;
 }
 
-const FriendCard: React.FC<FriendCardProps> = ({ 
-  friend, 
-  onPress, 
-  showBalance = false, 
-  balance = 0 
+const FriendCard: React.FC<FriendCardProps> = ({
+  friend,
+  onPress,
+  showBalance = false,
+  balance = 0
 }) => {
   const getBalanceColor = (balance: number) => {
     if (balance > 0) return '#4CAF50';
@@ -28,28 +28,33 @@ const FriendCard: React.FC<FriendCardProps> = ({
     return 'Settled up';
   };
 
+  // Handle both old format (direct user object) and new format (nested user object)
+  const user = friend.user || friend;
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.avatarContainer}>
-        {friend.user.avatar ? (
-          <Image source={{ uri: friend.user.avatar }} style={styles.avatar} />
+        {user.avatar ? (
+          <Image source={{ uri: user.avatar }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={24} color="#757575" />
           </View>
         )}
       </View>
-      
+
       <View style={styles.infoContainer}>
-        <Text style={styles.name}>{friend.user.name}</Text>
-        <Text style={styles.email}>{friend.user.email}</Text>
-        {showBalance && (
+        <Text style={styles.name}>{user.name}</Text>
+      </View>
+
+      {showBalance && (
+        <View style={styles.balanceContainer}>
           <Text style={[styles.balance, { color: getBalanceColor(balance) }]}>
             {getBalanceText(balance)}
           </Text>
-        )}
-      </View>
-      
+        </View>
+      )}
+
       <Ionicons name="chevron-forward" size={20} color="#757575" />
     </TouchableOpacity>
   );
@@ -96,12 +101,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
   },
-  email: {
-    fontSize: 14,
-    color: '#757575',
-    marginBottom: 4,
+  balanceContainer: {
+    marginRight: 8,
   },
   balance: {
     fontSize: 14,
