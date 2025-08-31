@@ -15,6 +15,7 @@ import { useApp } from '../context/AppContext';
 import { Expense } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import ExpenseCard from '../components/ExpenseCard';
+import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 const ActivitiesScreen = () => {
     const navigation = useNavigation<any>();
@@ -123,11 +124,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F5F5F5',
+
     },
     header: {
         backgroundColor: 'white',
         paddingHorizontal: 20,
-        paddingTop: 20,
+        paddingTop: getHeaderTopPadding(),
         paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#E0E0E0',

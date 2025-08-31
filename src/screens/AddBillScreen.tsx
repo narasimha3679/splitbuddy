@@ -17,6 +17,7 @@ import { useApp } from '../context/AppContext';
 import { Bill, Expense } from '../types';
 import { generateId, formatCurrency } from '../utils/calculations';
 import { showErrorAlert, showSuccessAlert } from '../utils/alerts';
+import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 const CATEGORIES = [
   'Food', 'Transport', 'Entertainment', 'Shopping', 'Utilities', 'Other'
@@ -338,6 +339,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -347,6 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    paddingTop: getHeaderTopPadding(),
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',

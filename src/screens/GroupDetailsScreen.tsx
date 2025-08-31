@@ -10,17 +10,23 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
-import { Group } from '../types';
+import { Group, RootStackParamList } from '../types';
+
+type GroupDetailsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'GroupDetails'>;
+type GroupDetailsScreenRouteProp = RouteProp<RootStackParamList, 'GroupDetails'>;
 import BillCard from '../components/BillCard';
 import FriendCard from '../components/FriendCard';
 import Avatar from '../components/Avatar';
+import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 const GroupDetailsScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
+  const navigation = useNavigation<GroupDetailsScreenNavigationProp>();
+  const route = useRoute<GroupDetailsScreenRouteProp>();
   const { state } = useApp();
-  const { group } = route.params as { group: Group };
+  const { group } = route.params;
 
   // Filter enhanced expenses for this group
   const groupBills = state.enhancedExpenses.filter(expense =>
@@ -40,7 +46,7 @@ const GroupDetailsScreen: React.FC = () => {
   const renderBill = ({ item }: { item: any }) => (
     <BillCard
       bill={item}
-      onPress={() => navigation.navigate('BillDetails' as any, { bill: item })}
+      onPress={() => navigation.navigate('BillDetails', { bill: item })}
     />
   );
 
@@ -52,7 +58,7 @@ const GroupDetailsScreen: React.FC = () => {
         </TouchableOpacity>
         <Text style={styles.title}>{group.name}</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('AddBill' as any, { groupId: group.id })}
+          onPress={() => navigation.navigate('AddBill', { groupId: group.id })}
         >
           <Ionicons name="add" size={24} color="#007AFF" />
         </TouchableOpacity>
@@ -84,7 +90,7 @@ const GroupDetailsScreen: React.FC = () => {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionButton}
-            onPress={() => navigation.navigate('AddBill' as any, { groupId: group.id })}
+            onPress={() => navigation.navigate('AddBill', { groupId: group.id })}
           >
             <Ionicons name="add-circle" size={24} color="#007AFF" />
             <Text style={styles.quickActionText}>Add Bill</Text>
@@ -141,7 +147,7 @@ const GroupDetailsScreen: React.FC = () => {
               </Text>
               <TouchableOpacity
                 style={styles.addBillButton}
-                onPress={() => navigation.navigate('AddBill' as any, { groupId: group.id })}
+                onPress={() => navigation.navigate('AddBill', { groupId: group.id })}
               >
                 <Ionicons name="add-circle" size={20} color="white" />
                 <Text style={styles.addBillButtonText}>Add Bill</Text>
@@ -158,12 +164,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    paddingTop: getHeaderTopPadding(),
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',

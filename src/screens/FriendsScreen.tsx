@@ -18,6 +18,7 @@ import { getTotalOwed, formatCurrency } from '../utils/calculations';
 import FriendCard from '../components/FriendCard';
 import { getFriendsWithBalances, getPendingFriendRequests, getUser } from '../utils/api';
 import { showErrorAlert } from '../utils/alerts';
+import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -156,7 +157,8 @@ const FriendsScreen: React.FC = () => {
             style={styles.addButton}
             onPress={() => navigation.navigate('AddFriend')}
           >
-            <Ionicons name="add" size={24} color="#007AFF" />
+
+            <Text style={styles.addText}>Add Friend</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -183,12 +185,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    paddingTop: getHeaderTopPadding(),
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
@@ -220,12 +224,18 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F8FF',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1.2,
+    borderColor: '#007AFF',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  addText: {
+    marginLeft: 6,
+    fontSize: 15,
+    color: '#007AFF',
   },
   listContainer: {
     paddingVertical: 8,

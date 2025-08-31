@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     View,
     Text,
@@ -8,9 +8,12 @@ import {
     SafeAreaView,
     RefreshControl,
     ActivityIndicator,
+    Animated,
+    Dimensions,
+    ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, Friend, Expense } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +22,7 @@ import { showErrorAlert } from '../utils/alerts';
 import Avatar from '../components/Avatar';
 import FriendExpenseCard from '../components/FriendExpenseCard';
 import { formatCurrency } from '../utils/calculations';
+import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 type FriendDetailsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'FriendDetails'>;
 type FriendDetailsScreenRouteProp = RouteProp<RootStackParamList, 'FriendDetails'>;
@@ -32,6 +36,8 @@ interface FriendExpenseData {
     sharedExpenses: Expense[];
 }
 
+const { width } = Dimensions.get('window');
+
 const FriendDetailsScreen: React.FC = () => {
     const navigation = useNavigation<FriendDetailsScreenNavigationProp>();
     const route = useRoute<FriendDetailsScreenRouteProp>();
@@ -42,78 +48,155 @@ const FriendDetailsScreen: React.FC = () => {
     const [expenseData, setExpenseData] = useState<FriendExpenseData | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
-    const loadFriendExpenses = async () => {
+    const scrollY = new Animated.Value(0);
+    const user = useMemo(() => friend.user || friend, [friend]);
+
+    // Optimized data loading with better error handling
+    const loadFriendExpenses = async (showLoader = true) => {
         try {
-            setLoading(true);
-            const user = friend.user || friend;
+            if (showLoader) setLoading(true);
             const data = await getFriendExpenses(user.id);
-
-            // Handle different API response structures
             const responseData = data.data || data;
             setExpenseData(responseData);
         } catch (error: any) {
             console.error('Error loading friend expenses:', error);
             showErrorAlert(error.message || 'Failed to load friend expenses');
-            // Set empty data to show empty state
-            setExpenseData({
-                friendId: 0,
-                friendName: '',
-                totalOwedToFriend: 0,
-                totalOwedByFriend: 0,
-                netBalance: 0,
-                sharedExpenses: []
-            });
+            // Only set empty data if we don't have existing data
+            if (!expenseData) {
+                setExpenseData({
+                    friendId: Number(user.id),
+                    friendName: user.name,
+                    totalOwedToFriend: 0,
+                    totalOwedByFriend: 0,
+                    netBalance: 0,
+                    sharedExpenses: []
+                });
+            }
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     };
 
     const onRefresh = async () => {
         setRefreshing(true);
-        await loadFriendExpenses();
+        await loadFriendExpenses(false);
         setRefreshing(false);
     };
 
-    useEffect(() => {
-        loadFriendExpenses();
-    }, [friend]);
+    // Use useFocusEffect for better performance
+    useFocusEffect(
+        React.useCallback(() => {
+            loadFriendExpenses();
+        }, [user.id])
+    );
 
-    const getBalanceColor = (balance: number) => {
-        if (balance > 0) return '#4CAF50'; // Green for positive (friend owes you)
-        if (balance < 0) return '#F44336'; // Red for negative (you owe friend)
-        return '#757575'; // Gray for zero
-    };
+    // Memoized calculations
+    const balanceInfo = useMemo(() => {
+        const balance = expenseData?.netBalance || 0;
+        const isPositive = balance > 0;
+        const isNegative = balance < 0;
 
-    const getBalanceText = (balance: number) => {
-        if (balance > 0) return `You lent $${balance.toFixed(2)}`;
-        if (balance < 0) return `You borrowed $${Math.abs(balance).toFixed(2)}`;
-        return 'Settled up';
-    };
+        return {
+            amount: Math.abs(balance),
+            color: isPositive ? '#22C55E' : isNegative ? '#EF4444' : '#6B7280',
+            text: isPositive ? 'owes you' : isNegative ? 'you owe' : 'settled up',
+            bgColor: isPositive ? '#DCFCE7' : isNegative ? '#FEE2E2' : '#F3F4F6',
+            icon: isPositive ? 'trending-up' as const : isNegative ? 'trending-down' as const : 'checkmark-circle' as const
+        };
+    }, [expenseData?.netBalance]);
 
-    const renderExpense = ({ item }: { item: Expense }) => (
-        <FriendExpenseCard
-            expense={item}
-            currentUserId={currentUser?.id || ''}
-            friendId={user.id}
-            onPress={() => navigation.navigate('ExpenseDetails', { expense: item, friendId: user.id })}
-        />
+    const expenseStats = useMemo(() => {
+        if (!expenseData?.sharedExpenses) return { total: 0, count: 0 };
+
+        const expenses = expenseData.sharedExpenses;
+        const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+        return {
+            total,
+            count: expenses.length,
+            avgAmount: expenses.length > 0 ? total / expenses.length : 0
+        };
+    }, [expenseData?.sharedExpenses]);
+
+    const sortedExpenses = useMemo(() => {
+        return expenseData?.sharedExpenses?.sort((a, b) =>
+            new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()
+        ) || [];
+    }, [expenseData?.sharedExpenses]);
+
+    const renderExpense = ({ item, index }: { item: Expense; index: number }) => (
+        <Animated.View
+            style={[
+                styles.expenseCard,
+                {
+                    transform: [{
+                        translateY: scrollY.interpolate({
+                            inputRange: [0, 100],
+                            outputRange: [0, -index * 2],
+                            extrapolate: 'clamp',
+                        })
+                    }]
+                }
+            ]}
+        >
+            <FriendExpenseCard
+                expense={item}
+                currentUserId={currentUser?.id || ''}
+                friendId={user.id}
+                onPress={() => navigation.navigate('ExpenseDetails', {
+                    expense: item,
+                    friendId: user.id
+                })}
+            />
+        </Animated.View>
     );
 
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={64} color="#9E9E9E" />
-            <Text style={styles.emptyStateTitle}>No shared expenses</Text>
+            <View style={styles.emptyIconContainer}>
+                <Ionicons name="receipt-outline" size={48} color="#9CA3AF" />
+            </View>
+            <Text style={styles.emptyStateTitle}>No shared expenses yet</Text>
             <Text style={styles.emptyStateSubtitle}>
-                You haven't shared any expenses with this friend yet
+                Start tracking expenses with {user.name}
             </Text>
             <TouchableOpacity
-                style={styles.addExpenseButton}
+                style={styles.primaryButton}
+                onPress={() => navigation.navigate('AddExpense', { friends: [user.id] })}
+                activeOpacity={0.8}
+            >
+                <Ionicons name="add-circle" size={20} color="white" />
+                <Text style={styles.primaryButtonText}>Add First Expense</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderQuickActions = () => (
+        <View style={styles.quickActions}>
+            <TouchableOpacity
+                style={[styles.actionButton, styles.primaryAction]}
                 onPress={() => navigation.navigate('AddExpense', { friends: [user.id] })}
             >
-                <Ionicons name="add" size={20} color="white" />
-                <Text style={styles.addExpenseButtonText}>Add Expense</Text>
+                <Ionicons name="add" size={18} color="white" />
+                <Text style={styles.actionButtonText}>Add Expense</Text>
             </TouchableOpacity>
+
+            {balanceInfo.amount > 0 && (
+                <TouchableOpacity
+                    style={[styles.actionButton, styles.secondaryAction]}
+                    onPress={() => {
+                        // TODO: Implement settle up functionality
+                        console.log('Settle up with', user.id);
+                    }}
+                >
+                    <Ionicons name="card" size={18} color="#007AFF" />
+                    <Text style={[styles.actionButtonText, { color: '#007AFF' }]}>
+                        Settle Up
+                    </Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 
@@ -122,111 +205,163 @@ const FriendDetailsScreen: React.FC = () => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={styles.loadingText}>Loading friend details...</Text>
+                    <Text style={styles.loadingText}>Loading expenses...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
-    const user = friend.user || friend;
-    const netBalance = expenseData?.netBalance || 0;
-
     return (
         <SafeAreaView style={styles.container}>
-            {/* Custom header with back button */}
-            <View style={styles.customHeader}>
+            {/* Animated Header */}
+            <Animated.View
+                style={[
+                    styles.customHeader,
+                    {
+                        shadowOpacity: scrollY.interpolate({
+                            inputRange: [0, 50],
+                            outputRange: [0, 0.1],
+                            extrapolate: 'clamp',
+                        })
+                    }
+                ]}
+            >
                 <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    <Ionicons name="arrow-back" size={24} color="#007AFF" />
+                    <Ionicons name="chevron-back" size={24} color="#007AFF" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Friend Details</Text>
-                <View style={styles.headerSpacer} />
-            </View>
 
-            {/* Header with friend info and balance */}
-            <View style={styles.header}>
-                <View style={styles.friendInfo}>
-                    <Avatar
-                        name={user.name}
-                        size={60}
-                        type="user"
-                        customAvatar={user.avatar}
-                    />
-                    <View style={styles.friendDetails}>
-                        <Text style={styles.friendName}>{user.name}</Text>
-                        <Text style={styles.friendEmail}>{user.email}</Text>
-                    </View>
-                </View>
-                <View style={styles.balanceContainer}>
-                    <Text style={[styles.balanceAmount, { color: getBalanceColor(netBalance) }]}>
-                        {formatCurrency(Math.abs(netBalance), 'USD')}
-                    </Text>
-                    <Text style={[styles.balanceText, { color: getBalanceColor(netBalance) }]}>
-                        {getBalanceText(netBalance)}
-                    </Text>
-                    {expenseData && (
-                        <View style={styles.balanceBreakdown}>
-                            <Text style={styles.breakdownText}>
-                                You owe: {formatCurrency(expenseData.totalOwedToFriend, 'USD')}
-                            </Text>
-                            <Text style={styles.breakdownText}>
-                                They owe: {formatCurrency(expenseData.totalOwedByFriend, 'USD')}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            </View>
-
-            {/* Expenses list */}
-            <View style={styles.expensesSection}>
-                <View style={styles.sectionHeader}>
-                    <View style={styles.sectionTitleContainer}>
-                        <Text style={styles.sectionTitle}>
-                            Shared Expenses
-                        </Text>
-                        <View style={styles.expenseCount}>
-                            <Text style={styles.expenseCountText}>
-                                {expenseData?.sharedExpenses?.length || 0}
-                            </Text>
-                        </View>
-                    </View>
-                    {expenseData?.sharedExpenses && expenseData.sharedExpenses.length > 0 && (
-                        <View style={styles.summaryContainer}>
-                            <Text style={styles.summaryText}>
-                                Total shared: {formatCurrency(expenseData.totalOwedToFriend + expenseData.totalOwedByFriend, 'USD')}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-                {expenseData?.sharedExpenses && expenseData.sharedExpenses.length > 0 ? (
-                    <FlatList
-                        data={expenseData.sharedExpenses.sort((a, b) =>
-                            new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()
-                        )}
-                        renderItem={renderExpense}
-                        keyExtractor={(item) => item.id}
-                        contentContainerStyle={styles.expensesList}
-                        showsVerticalScrollIndicator={false}
-                        refreshControl={
-                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                <Animated.Text
+                    style={[
+                        styles.headerTitle,
+                        {
+                            opacity: scrollY.interpolate({
+                                inputRange: [0, 100],
+                                outputRange: [0, 1],
+                                extrapolate: 'clamp',
+                            })
                         }
-                    />
-                ) : (
-                    renderEmptyState()
-                )}
-            </View>
-
-            {/* Floating Action Button for adding expenses */}
-            {expenseData?.sharedExpenses && expenseData.sharedExpenses.length > 0 && (
-                <TouchableOpacity
-                    style={styles.fab}
-                    onPress={() => navigation.navigate('AddExpense', { friends: [user.id] })}
+                    ]}
                 >
-                    <Ionicons name="add" size={24} color="white" />
+                    {user.name}
+                </Animated.Text>
+
+                <TouchableOpacity
+                    style={styles.headerAction}
+                    onPress={() => {/* More options */ }}
+                >
+                    <Ionicons name="ellipsis-horizontal" size={20} color="#007AFF" />
                 </TouchableOpacity>
-            )}
+            </Animated.View>
+
+            <ScrollView
+                contentContainerStyle={styles.scrollViewContent}
+                showsVerticalScrollIndicator={false}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false }
+                )}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor="#007AFF"
+                    />
+                }
+            >
+                {/* Friend Profile Section */}
+                <View style={styles.profileSection}>
+                    <View style={styles.avatarContainer}>
+                        <Avatar
+                            name={user.name}
+                            size={80}
+                            type="user"
+                            customAvatar={user.avatar}
+                        />
+                        <View style={styles.onlineIndicator} />
+                    </View>
+
+                    <Text style={styles.userName}>{user.name}</Text>
+                    <Text style={styles.userEmail}>{user.email}</Text>
+                </View>
+
+                {/* Balance Overview - Redesigned */}
+                <View style={styles.balanceSection}>
+                    <View style={[styles.balanceCard, { backgroundColor: balanceInfo.bgColor }]}>
+                        <View style={styles.balanceHeader}>
+                            <Ionicons
+                                name={balanceInfo.icon}
+                                size={24}
+                                color={balanceInfo.color}
+                            />
+                            <Text style={styles.balanceLabel}>Current Balance</Text>
+                        </View>
+
+                        <Text style={[styles.balanceAmount, { color: balanceInfo.color }]}>
+                            {balanceInfo.amount > 0 && formatCurrency(balanceInfo.amount, 'USD')}
+                            {balanceInfo.amount === 0 && '—'}
+                        </Text>
+
+                        <Text style={[styles.balanceDescription, { color: balanceInfo.color }]}>
+                            {balanceInfo.amount > 0 ? `${user.name} ${balanceInfo.text}` : 'All settled up! 🎉'}
+                        </Text>
+                    </View>
+
+                    {/* Quick Stats */}
+                    {expenseStats.count > 0 && (
+                        <View style={styles.statsRow}>
+                            <View style={styles.statItem}>
+                                <Text style={styles.statValue}>{expenseStats.count}</Text>
+                                <Text style={styles.statLabel}>Expenses</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <Text style={styles.statValue}>
+                                    {formatCurrency(expenseStats.total, 'USD')}
+                                </Text>
+                                <Text style={styles.statLabel}>Total Shared</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <Text style={styles.statValue}>
+                                    {formatCurrency(expenseStats.avgAmount || 0, 'USD')}
+                                </Text>
+                                <Text style={styles.statLabel}>Avg Amount</Text>
+                            </View>
+                        </View>
+                    )}
+                </View>
+
+                {/* Quick Actions */}
+                {renderQuickActions()}
+
+                {/* Expenses Section */}
+                <View style={styles.expensesSection}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Recent Expenses</Text>
+                        {expenseStats.count > 0 && (
+                            <TouchableOpacity style={styles.viewAllButton}>
+                                <Text style={styles.viewAllText}>View All</Text>
+                                <Ionicons name="chevron-forward" size={16} color="#007AFF" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                    {sortedExpenses.length > 0 ? (
+                        <FlatList
+                            data={sortedExpenses}
+                            renderItem={renderExpense}
+                            keyExtractor={(item) => item.id}
+                            scrollEnabled={false}
+                            contentContainerStyle={styles.expensesList}
+                        />
+                    ) : (
+                        renderEmptyState()
+                    )}
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -234,188 +369,290 @@ const FriendDetailsScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FAFAFA',
     },
     customHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        paddingTop: getHeaderTopPadding(12),
         backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
+        zIndex: 1000,
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F8F9FA',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#333',
+        color: '#1F2937',
+        textAlign: 'center',
+        flex: 1,
     },
-    headerSpacer: {
+    headerAction: {
         width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F8F9FA',
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'white',
     },
     loadingText: {
         marginTop: 16,
         fontSize: 16,
-        color: '#757575',
+        color: '#6B7280',
+        fontWeight: '500',
     },
-    header: {
+
+    // Profile Section
+    profileSection: {
         backgroundColor: 'white',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-    },
-    friendInfo: {
-        flexDirection: 'row',
         alignItems: 'center',
+        paddingVertical: 32,
+        paddingHorizontal: 20,
+        marginBottom: 12,
+    },
+    avatarContainer: {
+        position: 'relative',
         marginBottom: 16,
     },
-    friendDetails: {
-        marginLeft: 16,
-        flex: 1,
+    onlineIndicator: {
+        position: 'absolute',
+        bottom: 4,
+        right: 4,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: '#22C55E',
+        borderWidth: 3,
+        borderColor: 'white',
     },
-    friendName: {
+    userName: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#333',
+        color: '#1F2937',
         marginBottom: 4,
+        textAlign: 'center',
     },
-    friendEmail: {
+    userEmail: {
         fontSize: 16,
-        color: '#757575',
+        color: '#6B7280',
+        textAlign: 'center',
     },
-    balanceContainer: {
+
+    // Balance Section - Completely redesigned
+    balanceSection: {
+        paddingHorizontal: 16,
+        marginBottom: 12,
+    },
+    balanceCard: {
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    balanceHeader: {
+        flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 16,
-        backgroundColor: '#F8F9FA',
-        borderRadius: 12,
+        marginBottom: 12,
+    },
+    balanceLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#374151',
+        marginLeft: 8,
     },
     balanceAmount: {
         fontSize: 32,
-        fontWeight: '700',
+        fontWeight: '800',
         marginBottom: 4,
+        textAlign: 'center',
     },
-    balanceText: {
+    balanceDescription: {
         fontSize: 16,
         fontWeight: '500',
+        textAlign: 'center',
     },
-    balanceBreakdown: {
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
+
+    // Stats Row
+    statsRow: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    statItem: {
+        flex: 1,
         alignItems: 'center',
     },
-    breakdownText: {
-        fontSize: 14,
-        color: '#757575',
-        marginVertical: 2,
+    statValue: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginBottom: 2,
     },
-    expensesSection: {
+    statLabel: {
+        fontSize: 12,
+        color: '#6B7280',
+        fontWeight: '500',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    statDivider: {
+        width: 1,
+        backgroundColor: '#E5E7EB',
+        marginHorizontal: 12,
+    },
+
+    // Quick Actions
+    quickActions: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        marginBottom: 24,
+        gap: 12,
+    },
+    actionButton: {
         flex: 1,
-        paddingTop: 16,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#333',
-    },
-    sectionTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    expenseCount: {
-        backgroundColor: '#007AFF',
+        justifyContent: 'center',
+        paddingVertical: 14,
         borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    primaryAction: {
+        backgroundColor: '#007AFF',
+    },
+    secondaryAction: {
+        backgroundColor: 'white',
+        borderWidth: 1.5,
+        borderColor: '#007AFF',
+    },
+    actionButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: 'white',
         marginLeft: 8,
     },
-    expenseCountText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: '600',
+
+    // Expenses Section
+    expensesSection: {
+        paddingHorizontal: 16,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
         marginBottom: 16,
     },
-    summaryContainer: {
-        backgroundColor: '#F0F8FF',
-        paddingHorizontal: 12,
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#1F2937',
+    },
+    viewAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingVertical: 6,
+        paddingHorizontal: 12,
+        backgroundColor: '#F0F8FF',
         borderRadius: 8,
     },
-    summaryText: {
+    viewAllText: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#007AFF',
+        marginRight: 4,
     },
     expensesList: {
-        paddingHorizontal: 16,
+        paddingBottom: 100, // Space for FAB
     },
+    expenseCard: {
+        marginBottom: 8,
+    },
+
+    // Empty State - Improved
     emptyState: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 40,
+        paddingHorizontal: 32,
+        paddingVertical: 60,
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        borderRadius: 16,
+        marginTop: 20,
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
     },
     emptyStateTitle: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#333',
-        marginTop: 16,
+        color: '#1F2937',
         marginBottom: 8,
+        textAlign: 'center',
     },
     emptyStateSubtitle: {
         fontSize: 16,
-        color: '#757575',
+        color: '#6B7280',
         textAlign: 'center',
+        lineHeight: 22,
         marginBottom: 32,
     },
-    addExpenseButton: {
+    primaryButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#007AFF',
         paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        paddingVertical: 14,
+        borderRadius: 12,
+        shadowColor: '#007AFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    addExpenseButtonText: {
+    primaryButtonText: {
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8,
     },
-    fab: {
-        position: 'absolute',
-        bottom: 20,
-        right: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#007AFF',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+    scrollViewContent: {
+        flexGrow: 1,
     },
 });
 

@@ -15,6 +15,7 @@ import { FriendRequest } from '../types';
 import { getPendingFriendRequests, acceptFriendRequest, declineFriendRequest, getFriends } from '../utils/api';
 import { getUser } from '../utils/api';
 import { showAlert, showErrorAlert, showSuccessAlert } from '../utils/alerts';
+import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 const FriendRequestsScreen: React.FC = () => {
     const navigation = useNavigation();
@@ -170,12 +171,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F5F5F5',
+
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 20,
+        paddingTop: getHeaderTopPadding(),
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#E0E0E0',

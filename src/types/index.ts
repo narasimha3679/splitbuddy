@@ -158,7 +158,9 @@ export type RootStackParamList = {
   CreateGroup: undefined;
   GroupDetails: { group: Group };
   AddExpense: { groupId?: string; friends?: string[] };
+  AddBill: { groupId: string };
   ExpenseDetails: { expense: Expense; friendId?: string };
+  BillDetails: { bill: Expense };
   FriendDetails: { friend: Friend };
   Profile: undefined;
 };

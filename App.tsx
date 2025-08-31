@@ -8,8 +8,8 @@ export default function App() {
   return (
     <AuthProvider>
       <AppProvider>
+        <StatusBar style="dark" backgroundColor="transparent" translucent />
         <AppNavigator />
-        <StatusBar style="auto" />
       </AppProvider>
     </AuthProvider>
   );
