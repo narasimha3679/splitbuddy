@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { LoginCredentials, RegisterCredentials, AuthResponse, AuthUser, User, FriendRequest, Friend, Group } from '../types';
+import { LoginCredentials, RegisterCredentials, AuthResponse, AuthUser, User, FriendRequest, Friend, Group, FriendBalance } from '../types';
 
 
 // Try IP address first, fallback to localhost
@@ -299,9 +299,9 @@ export const searchUserByEmail = async (email: string): Promise<User | null> => 
 export const getFriends = async (userId: string): Promise<Friend[]> => {
   const baseUrl = await getApiBaseUrl();
   console.log('API: Getting friends for user:', userId);
-  console.log('API: Using URL:', `${baseUrl}/friends/${userId}/friends`);
+  console.log('API: Using URL:', `${baseUrl}/friends/${userId}`);
 
-  const response = await authenticatedFetch(`${baseUrl}/friends/${userId}/friends`, {
+  const response = await authenticatedFetch(`${baseUrl}/friends/${userId}`, {
     method: 'GET',
   });
 
@@ -331,6 +331,30 @@ export const getFriends = async (userId: string): Promise<Friend[]> => {
 
   console.log('API: Transformed friends:', JSON.stringify(friends, null, 2));
   return friends;
+};
+
+// Get friends with balances
+export const getFriendsWithBalances = async (userId: string): Promise<FriendBalance[]> => {
+  const baseUrl = await getApiBaseUrl();
+  console.log('API: Getting friends with balances for user:', userId);
+  console.log('API: Using URL:', `${baseUrl}/expenses/user/${userId}/balances`);
+
+  const response = await authenticatedFetch(`${baseUrl}/expenses/user/${userId}/balances`, {
+    method: 'GET',
+  });
+
+  console.log('API: Friends with balances response status:', response.status);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.log('API: Friends with balances error:', error);
+    throw new Error(error.message || 'Failed to get friends with balances');
+  }
+
+  const friendsData: FriendBalance[] = await response.json();
+  console.log('API: Friends with balances raw response:', JSON.stringify(friendsData, null, 2));
+
+  return friendsData;
 };
 
 // Get pending friend requests
@@ -374,7 +398,7 @@ export const sendFriendRequest = async (senderId: string, receiverId: string): P
 };
 
 // Accept friend request
-export const acceptFriendRequest = async (requestId: string): Promise<FriendRequest> => {
+export const acceptFriendRequest = async (requestId: number): Promise<FriendRequest> => {
   const baseUrl = await getApiBaseUrl();
   const response = await authenticatedFetch(`${baseUrl}/friends/requests/${requestId}?response=ACCEPTED`, {
     method: 'PUT',
@@ -390,7 +414,7 @@ export const acceptFriendRequest = async (requestId: string): Promise<FriendRequ
 };
 
 // Decline friend request
-export const declineFriendRequest = async (requestId: string): Promise<FriendRequest> => {
+export const declineFriendRequest = async (requestId: number): Promise<FriendRequest> => {
   const baseUrl = await getApiBaseUrl();
   const response = await authenticatedFetch(`${baseUrl}/friends/requests/${requestId}?response=REJECTED`, {
     method: 'PUT',
@@ -443,4 +467,30 @@ export const getMyGroups = async (): Promise<Group[]> => {
   const groups: Group[] = await response.json();
   console.log('API: Groups retrieved successfully:', groups);
   return groups;
+};
+
+// Get expenses between current user and a specific friend
+export const getFriendExpenses = async (friendId: string): Promise<any> => {
+  const baseUrl = await getApiBaseUrl();
+  const currentUser = await getUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  console.log('API: Getting expenses for friend:', friendId);
+
+  const response = await authenticatedFetch(`${baseUrl}/expenses/friend/${friendId}/expenses`, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.log('API: Get friend expenses error:', error);
+    throw new Error(error.message || 'Failed to get friend expenses');
+  }
+
+  const data = await response.json();
+  console.log('API: Friend expenses retrieved successfully:', data);
+  return data;
 };

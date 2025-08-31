@@ -8,12 +8,13 @@ import { View, StyleSheet } from 'react-native';
 import ActivitiesScreen from '../screens/ActivitiesScreen';
 import FriendsScreen from '../screens/FriendsScreen';
 import FriendRequestsScreen from '../screens/FriendRequestsScreen';
+import FriendDetailsScreen from '../screens/FriendDetailsScreen';
 import GroupsScreen from '../screens/GroupsScreen';
 import AddFriendScreen from '../screens/AddFriendScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupDetailsScreen from '../screens/GroupDetailsScreen';
-import AddBillScreen from '../screens/AddBillScreen';
-import BillDetailsScreen from '../screens/BillDetailsScreen';
+import AddExpenseScreen from '../screens/AddExpenseScreen';
+import ExpenseDetailsScreen from '../screens/ExpenseDetailsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -26,51 +27,65 @@ const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator<RootStackParamList>();
 
 const FriendsStack = () => (
-  <Stack.Navigator>
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen
       name="Friends"
       component={FriendsScreen}
-      options={{ title: 'Friends' }}
     />
     <Stack.Screen
       name="AddFriend"
       component={AddFriendScreen}
-      options={{ title: 'Add Friend' }}
     />
     <Stack.Screen
       name="FriendRequests"
       component={FriendRequestsScreen}
-      options={{ title: 'Friend Requests' }}
+    />
+    <Stack.Screen
+      name="FriendDetails"
+      component={FriendDetailsScreen}
+    />
+    <Stack.Screen
+      name="ExpenseDetails"
+      component={ExpenseDetailsScreen}
     />
   </Stack.Navigator>
 );
 
 const GroupsStack = () => (
-  <Stack.Navigator>
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen
       name="Groups"
       component={GroupsScreen}
-      options={{ title: 'Groups' }}
     />
     <Stack.Screen
       name="CreateGroup"
       component={CreateGroupScreen}
-      options={{ title: 'Create Group' }}
     />
     <Stack.Screen
       name="GroupDetails"
       component={GroupDetailsScreen}
-      options={{ title: 'Group Details' }}
     />
     <Stack.Screen
-      name="AddBill"
-      component={AddBillScreen}
-      options={{ title: 'Add Bill' }}
+      name="ExpenseDetails"
+      component={ExpenseDetailsScreen}
+    />
+  </Stack.Navigator>
+);
+
+const ActivitiesStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen
+      name="Activities"
+      component={ActivitiesScreen}
     />
     <Stack.Screen
-      name="BillDetails"
-      component={BillDetailsScreen}
-      options={{ title: 'Bill Details' }}
+      name="AddExpense"
+      component={AddExpenseScreen}
+    />
+
+    <Stack.Screen
+      name="ExpenseDetails"
+      component={ExpenseDetailsScreen}
     />
   </Stack.Navigator>
 );
@@ -113,7 +128,7 @@ const TabNavigator = () => (
     />
     <Tab.Screen
       name="Activities"
-      component={ActivitiesScreen}
+      component={ActivitiesStack}
       options={{ title: 'Activities' }}
     />
     <Tab.Screen
@@ -146,7 +161,5 @@ const AppNavigator = () => {
     </NavigationContainer>
   );
 };
-
-
 
 export default AppNavigator;

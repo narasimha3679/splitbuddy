@@ -40,7 +40,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
         )}
       </View>
 
-      <Ionicons name="chevron-forward" size={20} color="#757575" />
+
     </TouchableOpacity>
   );
 };

@@ -7,42 +7,59 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { getTotalOwed, formatCurrency } from '../utils/calculations';
 import FriendCard from '../components/FriendCard';
-import { getFriends, getPendingFriendRequests, getUser } from '../utils/api';
+import { getFriendsWithBalances, getPendingFriendRequests, getUser } from '../utils/api';
+import { showErrorAlert } from '../utils/alerts';
 
 type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const FriendsScreen: React.FC = () => {
   const navigation = useNavigation<FriendsScreenNavigationProp>();
   const { state, dispatch } = useApp();
+  const { state: authState } = useAuth();
   const { friends, expenses } = state;
+  const currentUser = authState.user;
   const [refreshing, setRefreshing] = useState(false);
 
   const loadFriends = async () => {
     try {
       const currentUser = await getUser();
       if (!currentUser) {
-        Alert.alert('Error', 'User not found');
+        showErrorAlert('User not found');
         return;
       }
 
-      console.log('FriendsScreen: Loading friends for user:', currentUser.id);
-      const friendsList = await getFriends(currentUser.id);
-      console.log('FriendsScreen: Received friends list:', friendsList.length, 'friends');
-      console.log('FriendsScreen: Friends data:', JSON.stringify(friendsList, null, 2));
+      console.log('FriendsScreen: Loading friends with balances for user:', currentUser.id);
+      const friendsWithBalances = await getFriendsWithBalances(currentUser.id);
+      console.log('FriendsScreen: Received friends with balances:', friendsWithBalances.length, 'friends');
+      console.log('FriendsScreen: Friends with balances data:', JSON.stringify(friendsWithBalances, null, 2));
+
+      // Transform the FriendBalance data to match the Friend structure expected by the app
+      const friendsList = friendsWithBalances.map(friendBalance => ({
+        id: friendBalance.friendId,
+        user: {
+          id: friendBalance.friendId,
+          name: friendBalance.friendName,
+          email: '', // Not provided by the new API
+          phone: '', // Not provided by the new API
+          avatar: '' // Not provided by the new API
+        },
+        addedAt: new Date(), // Not provided by the new API
+        balance: friendBalance.balance // Add balance to the friend object
+      }));
 
       dispatch({ type: 'SET_FRIENDS', payload: friendsList });
     } catch (error: any) {
-      console.error('FriendsScreen: Error loading friends:', error);
-      Alert.alert('Error', error.message || 'Failed to load friends');
+      console.error('FriendsScreen: Error loading friends with balances:', error);
+      showErrorAlert(error.message || 'Failed to load friends');
     }
   };
 
@@ -71,30 +88,7 @@ const FriendsScreen: React.FC = () => {
     loadPendingRequests();
   }, []);
 
-  const getFriendBalance = (friendId: string) => {
-    if (!friendId) return 0;
 
-    const friendExpenses = expenses.filter(expense =>
-      expense.userId === friendId ||
-      (expense.billId && state.bills.find(bill =>
-        bill.id === expense.billId && bill.paidBy === friendId
-      ))
-    );
-
-    let balance = 0;
-    friendExpenses.forEach(expense => {
-      const bill = state.bills.find(b => b.id === expense.billId);
-      if (bill) {
-        if (expense.userId === friendId) {
-          balance += expense.amount; // Friend owes this amount
-        } else if (bill.paidBy === friendId) {
-          balance -= expense.amount; // You owe friend this amount
-        }
-      }
-    });
-
-    return balance;
-  };
 
   const renderFriend = ({ item }: { item: any }) => {
     console.log('Rendering friend item:', JSON.stringify(item, null, 2));
@@ -112,7 +106,8 @@ const FriendsScreen: React.FC = () => {
       return null;
     }
 
-    const balance = getFriendBalance(user.id);
+    // Use the balance from the API response instead of calculating it locally
+    const balance = item.balance || 0;
 
     return (
       <FriendCard
@@ -120,7 +115,7 @@ const FriendsScreen: React.FC = () => {
         showBalance={true}
         balance={balance}
         onPress={() => {
-          // Navigate to friend details or chat
+          navigation.navigate('FriendDetails', { friend: item });
         }}
       />
     );

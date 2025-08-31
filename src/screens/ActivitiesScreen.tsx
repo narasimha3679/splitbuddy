@@ -1,184 +1,204 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    FlatList,
+    RefreshControl,
+    SafeAreaView
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useApp } from '../context/AppContext';
+import { Expense } from '../types';
+import { formatCurrency } from '../utils/calculations';
+import ExpenseCard from '../components/ExpenseCard';
 
 const ActivitiesScreen = () => {
-    // Placeholder data - will be replaced with API data later
-    const placeholderActivities = [
-        {
-            id: '1',
-            type: 'bill_added',
-            title: 'New bill added',
-            description: 'You added a bill for $25.00 in "Dinner Group"',
-            timestamp: '2 hours ago',
-            icon: 'receipt-outline'
-        },
-        {
-            id: '2',
-            type: 'friend_added',
-            title: 'Friend added',
-            description: 'John Doe accepted your friend request',
-            timestamp: '1 day ago',
-            icon: 'person-add-outline'
-        },
-        {
-            id: '3',
-            type: 'payment_received',
-            title: 'Payment received',
-            description: 'Jane Smith paid you $12.50',
-            timestamp: '2 days ago',
-            icon: 'card-outline'
-        },
-        {
-            id: '4',
-            type: 'group_created',
-            title: 'Group created',
-            description: 'You created "Weekend Trip" group',
-            timestamp: '3 days ago',
-            icon: 'folder-open-outline'
-        }
-    ];
+    const navigation = useNavigation<any>();
+    const { state } = useApp();
+    const { enhancedExpenses, currentUser } = state;
+    const [refreshing, setRefreshing] = useState(false);
+    const [activeTab, setActiveTab] = useState<'all' | 'expenses'>('all');
 
-    const getActivityIcon = (type: string) => {
-        switch (type) {
-            case 'bill_added':
-                return 'receipt-outline';
-            case 'friend_added':
-                return 'person-add-outline';
-            case 'payment_received':
-                return 'card-outline';
-            case 'group_created':
-                return 'folder-open-outline';
-            default:
-                return 'notifications-outline';
-        }
+    const onRefresh = async () => {
+        setRefreshing(true);
+        // TODO: Refresh data from API
+        setTimeout(() => setRefreshing(false), 1000);
     };
 
-    const getActivityColor = (type: string) => {
-        switch (type) {
-            case 'bill_added':
-                return '#007AFF';
-            case 'friend_added':
-                return '#34C759';
-            case 'payment_received':
-                return '#FF9500';
-            case 'group_created':
-                return '#AF52DE';
-            default:
-                return '#8E8E93';
-        }
+    // Sort all expenses by date
+    const allActivities = enhancedExpenses
+        .map(expense => ({ ...expense, type: 'expense' as const, date: new Date(expense.createdAt) }))
+        .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const filteredActivities = allActivities;
+
+    const renderActivity = ({ item }: { item: any }) => {
+        return (
+            <ExpenseCard
+                expense={item}
+                onPress={() => navigation.navigate('ExpenseDetails', { expense: item })}
+            />
+        );
     };
+
+    const renderEmptyState = () => (
+        <View style={styles.emptyState}>
+            <Ionicons name="receipt-outline" size={64} color="#9E9E9E" />
+            <Text style={styles.emptyStateTitle}>No activities yet</Text>
+            <Text style={styles.emptyStateDescription}>
+                Your expenses will appear here
+            </Text>
+            <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => navigation.navigate('AddExpense')}
+            >
+                <Ionicons name="add-circle" size={20} color="white" />
+                <Text style={styles.addButtonText}>Add Expense</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderTabButton = (tab: 'all' | 'expenses', label: string, icon: string) => (
+        <TouchableOpacity
+            style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
+            onPress={() => setActiveTab(tab)}
+        >
+            <Ionicons
+                name={icon as any}
+                size={20}
+                color={activeTab === tab ? '#007AFF' : '#757575'}
+            />
+            <Text style={[styles.tabButtonText, activeTab === tab && styles.tabButtonTextActive]}>
+                {label}
+            </Text>
+        </TouchableOpacity>
+    );
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Activities</Text>
-                <Text style={styles.headerSubtitle}>Your recent activity history</Text>
+                <Text style={styles.headerSubtitle}>Your bills and expenses</Text>
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {placeholderActivities.length > 0 ? (
-                    placeholderActivities.map((activity) => (
-                        <TouchableOpacity key={activity.id} style={styles.activityCard}>
-                            <View style={styles.activityIcon}>
-                                <Ionicons
-                                    name={getActivityIcon(activity.type) as any}
-                                    size={24}
-                                    color={getActivityColor(activity.type)}
-                                />
-                            </View>
-                            <View style={styles.activityContent}>
-                                <Text style={styles.activityTitle}>{activity.title}</Text>
-                                <Text style={styles.activityDescription}>{activity.description}</Text>
-                                <Text style={styles.activityTimestamp}>{activity.timestamp}</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
-                        </TouchableOpacity>
-                    ))
-                ) : (
-                    <View style={styles.emptyState}>
-                        <Ionicons name="notifications-off-outline" size={64} color="#8E8E93" />
-                        <Text style={styles.emptyStateTitle}>No activities yet</Text>
-                        <Text style={styles.emptyStateDescription}>
-                            Your activities will appear here once you start using the app
-                        </Text>
-                    </View>
-                )}
-            </ScrollView>
-        </View>
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+                {renderTabButton('all', 'All', 'list')}
+                {renderTabButton('expenses', 'Expenses', 'card')}
+            </View>
+
+            {/* Activity Count */}
+            <View style={styles.countContainer}>
+                <Text style={styles.countText}>
+                    {filteredActivities.length} {filteredActivities.length === 1 ? 'item' : 'items'}
+                </Text>
+                <TouchableOpacity
+                    style={styles.addButtonSmall}
+                    onPress={() => navigation.navigate('AddExpense')}
+                >
+                    <Ionicons name="add" size={20} color="#007AFF" />
+                </TouchableOpacity>
+            </View>
+
+            <FlatList
+                data={filteredActivities}
+                renderItem={renderActivity}
+                keyExtractor={(item) => `${item.type}-${item.id}`}
+                contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+                ListEmptyComponent={renderEmptyState}
+            />
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: '#F5F5F5',
     },
     header: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'white',
         paddingHorizontal: 20,
-        paddingTop: 60,
-        paddingBottom: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
+        borderBottomColor: '#E0E0E0',
     },
     headerTitle: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#000000',
+        color: '#333',
         marginBottom: 4,
     },
     headerSubtitle: {
         fontSize: 16,
-        color: '#8E8E93',
+        color: '#757575',
     },
-    content: {
-        flex: 1,
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
         paddingHorizontal: 20,
-        paddingTop: 20,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
     },
-    activityCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
+    tabButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        justifyContent: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        marginHorizontal: 4,
     },
-    activityIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#F2F2F7',
+    tabButtonActive: {
+        backgroundColor: '#F0F8FF',
+    },
+    tabButtonText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#757575',
+        marginLeft: 6,
+    },
+    tabButtonTextActive: {
+        color: '#007AFF',
+        fontWeight: '600',
+    },
+    countContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    countText: {
+        fontSize: 14,
+        color: '#757575',
+        fontWeight: '500',
+    },
+    addButtonSmall: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F0F8FF',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
     },
-    activityContent: {
-        flex: 1,
-    },
-    activityTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#000000',
-        marginBottom: 4,
-    },
-    activityDescription: {
-        fontSize: 14,
-        color: '#8E8E93',
-        marginBottom: 4,
-    },
-    activityTimestamp: {
-        fontSize: 12,
-        color: '#C7C7CC',
+    listContainer: {
+        padding: 20,
+        paddingTop: 12,
     },
     emptyState: {
         flex: 1,
@@ -189,15 +209,30 @@ const styles = StyleSheet.create({
     emptyStateTitle: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#8E8E93',
+        color: '#333',
         marginTop: 16,
         marginBottom: 8,
     },
     emptyStateDescription: {
         fontSize: 16,
-        color: '#8E8E93',
+        color: '#757575',
         textAlign: 'center',
         paddingHorizontal: 40,
+        marginBottom: 32,
+    },
+    addButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    addButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8,
     },
 });
 

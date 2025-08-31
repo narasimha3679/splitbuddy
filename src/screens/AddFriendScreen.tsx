@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 import { searchUserByEmail, sendFriendRequest, getUser } from '../utils/api';
+import { showAlert, showErrorAlert, showSuccessAlert } from '../utils/alerts';
 
 const AddFriendScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -26,7 +26,7 @@ const AddFriendScreen: React.FC = () => {
 
   const handleSearch = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter an email');
+      showErrorAlert('Please enter an email');
       return;
     }
     try {
@@ -34,12 +34,12 @@ const AddFriendScreen: React.FC = () => {
       setFoundUser(null);
       const user = await searchUserByEmail(email.trim());
       if (!user) {
-        Alert.alert('Not found', 'No user found with that email');
+        showAlert('Not found', 'No user found with that email');
         return;
       }
       setFoundUser(user);
     } catch (e: any) {
-      Alert.alert('Search failed', e?.message || 'Unable to search user');
+      showAlert('Search failed', e?.message || 'Unable to search user');
     } finally {
       setSearching(false);
     }
@@ -51,18 +51,13 @@ const AddFriendScreen: React.FC = () => {
       setSending(true);
       const currentUser = await getUser();
       if (!currentUser) {
-        Alert.alert('Error', 'User not found');
+        showErrorAlert('User not found');
         return;
       }
       await sendFriendRequest(currentUser.id, foundUser.id);
-      Alert.alert('Request sent', 'Friend request has been sent.', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      showSuccessAlert('Friend request has been sent.', () => navigation.goBack());
     } catch (e: any) {
-      Alert.alert('Failed', e?.message || 'Could not send friend request');
+      showAlert('Failed', e?.message || 'Could not send friend request');
     } finally {
       setSending(false);
     }

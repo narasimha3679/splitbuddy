@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { NavigationProps } from '../types';
+import { showErrorAlert } from '../utils/alerts';
 
 const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -22,27 +22,27 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { register } = useAuth();
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showErrorAlert('Please fill in all fields');
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showErrorAlert('Please enter a valid email address');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      showErrorAlert('Password must be at least 6 characters long');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showErrorAlert('Passwords do not match');
       return;
     }
 
@@ -50,15 +50,15 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
     try {
       await register({ name, email, password });
     } catch (error) {
-      Alert.alert('Registration Failed', error instanceof Error ? error.message : 'An error occurred');
+      showErrorAlert(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -115,10 +115,10 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
             >
-              <Ionicons 
-                name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                size={20} 
-                color="#666" 
+              <Ionicons
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="#666"
               />
             </TouchableOpacity>
           </View>
@@ -138,10 +138,10 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.eyeIcon}
             >
-              <Ionicons 
-                name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
-                size={20} 
-                color="#666" 
+              <Ionicons
+                name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="#666"
               />
             </TouchableOpacity>
           </View>

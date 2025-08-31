@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   ScrollView,
   FlatList,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { useApp } from '../context/AppContext';
 import { Group, User, Friend } from '../types';
 import { generateId } from '../utils/calculations';
 import { createGroup, getFriends } from '../utils/api';
+import { showErrorAlert, showSuccessAlert } from '../utils/alerts';
 
 const CreateGroupScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,12 +30,12 @@ const CreateGroupScreen: React.FC = () => {
 
   const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      Alert.alert('Error', 'Please enter a group name');
+      showErrorAlert('Please enter a group name');
       return;
     }
 
     if (selectedMembers.length === 0) {
-      Alert.alert('Error', 'Please select at least one member');
+      showErrorAlert('Please select at least one member');
       return;
     }
 
@@ -47,22 +47,13 @@ const CreateGroupScreen: React.FC = () => {
       // Add to local state
       dispatch({ type: 'CREATE_GROUP', payload: newGroup });
 
-      Alert.alert(
-        'Success',
-        `Group "${groupName}" has been created!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back to Groups screen
-              (navigation as any).navigate('Groups');
-            },
-          },
-        ]
-      );
+      showSuccessAlert(`Group "${groupName}" has been created!`, () => {
+        // Navigate back to Groups screen
+        (navigation as any).navigate('Groups');
+      });
     } catch (error) {
       console.error('Failed to create group:', error);
-      Alert.alert('Error', 'Failed to create group. Please try again.');
+      showErrorAlert('Failed to create group. Please try again.');
     } finally {
       setIsCreating(false);
     }
@@ -77,7 +68,7 @@ const CreateGroupScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load friends:', error);
-      Alert.alert('Error', 'Failed to load friends. Please try again.');
+      showErrorAlert('Failed to load friends. Please try again.');
     } finally {
       setLoadingFriends(false);
     }

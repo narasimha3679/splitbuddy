@@ -17,16 +17,31 @@ const FriendCard: React.FC<FriendCardProps> = ({
   showBalance = false,
   balance = 0
 }) => {
-  const getBalanceColor = (balance: number) => {
-    if (balance > 0) return '#4CAF50';
-    if (balance < 0) return '#F44336';
-    return '#757575';
+  // Pick a random emoji from a given list
+  const pickEmoji = (emojis: string[]) => {
+    return emojis[Math.floor(Math.random() * emojis.length)];
   };
 
   const getBalanceText = (balance: number) => {
-    if (balance > 0) return `You owe $${balance.toFixed(2)}`;
-    if (balance < 0) return `Owes you $${Math.abs(balance).toFixed(2)}`;
-    return 'Settled up';
+    if (balance > 0) {
+      // They owe you money 💰
+      const oweEmojis = ['💰', '🤑', '💸', '😎', '✨'];
+      return `Owes you ${balance.toFixed(2)} ${pickEmoji(oweEmojis)}`;
+    }
+    if (balance < 0) {
+      // You owe them money 😅
+      const debtEmojis = ['💸', '😅', '🙈', '🥲', '😭'];
+      return `You owe ${Math.abs(balance).toFixed(2)} ${pickEmoji(debtEmojis)}`;
+    }
+    // Settled up 🎉
+    const settledEmojis = ['🎉', '🤝', '😊', '🍻', '✨'];
+    return `Settled up ${pickEmoji(settledEmojis)}`;
+  };
+
+  const getBalanceColor = (balance: number) => {
+    if (balance > 0) return '#4CAF50'; // Green = good
+    if (balance < 0) return '#F44336'; // Red = debt
+    return '#757575'; // Gray = neutral
   };
 
   // Handle both old format (direct user object) and new format (nested user object)
@@ -48,14 +63,22 @@ const FriendCard: React.FC<FriendCardProps> = ({
       </View>
 
       {showBalance && (
-        <View style={styles.balanceContainer}>
-          <Text style={[styles.balance, { color: getBalanceColor(balance) }]}>
+        <View
+          style={{
+            backgroundColor: balance > 0 ? '#E8F5E9' : balance < 0 ? '#FFEBEE' : '#F5F5F5',
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 12,
+          }}
+        >
+          <Text style={{ color: getBalanceColor(balance), fontWeight: 'bold' }}>
             {getBalanceText(balance)}
           </Text>
         </View>
+
       )}
 
-      <Ionicons name="chevron-forward" size={20} color="#757575" />
+
     </TouchableOpacity>
   );
 };

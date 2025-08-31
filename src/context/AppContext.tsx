@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { User, Friend, Group, Bill, Expense, FriendRequest } from '../types';
+import { User, Friend, Group, LegacyExpense, FriendRequest, Expense } from '../types';
 import { useAuth } from './AuthContext';
 
 interface AppState {
   currentUser: User | null;
   friends: Friend[];
   groups: Group[];
-  bills: Bill[];
-  expenses: Expense[];
+  expenses: LegacyExpense[];
+  enhancedExpenses: Expense[]; // New enhanced expenses
   friendRequests: FriendRequest[];
 }
 
@@ -19,19 +19,23 @@ type AppAction =
   | { type: 'SET_FRIEND_REQUESTS'; payload: FriendRequest[] }
   | { type: 'ADD_FRIEND_REQUEST'; payload: FriendRequest }
   | { type: 'UPDATE_FRIEND_REQUEST'; payload: FriendRequest }
-  | { type: 'REMOVE_FRIEND_REQUEST'; payload: string }
+  | { type: 'REMOVE_FRIEND_REQUEST'; payload: number }
   | { type: 'SET_GROUPS'; payload: Group[] }
   | { type: 'CREATE_GROUP'; payload: Group }
-  | { type: 'ADD_BILL'; payload: Bill }
-  | { type: 'ADD_EXPENSE'; payload: Expense }
-  | { type: 'UPDATE_EXPENSE'; payload: { id: string; updates: Partial<Expense> } };
+
+  | { type: 'ADD_EXPENSE'; payload: LegacyExpense }
+  | { type: 'UPDATE_EXPENSE'; payload: { id: string; updates: Partial<LegacyExpense> } }
+  | { type: 'ADD_ENHANCED_EXPENSE'; payload: Expense }
+  | { type: 'UPDATE_ENHANCED_EXPENSE'; payload: { id: string; updates: Partial<Expense> } }
+  | { type: 'DELETE_ENHANCED_EXPENSE'; payload: string };
 
 const initialState: AppState = {
   currentUser: null,
   friends: [],
   groups: [],
-  bills: [],
+
   expenses: [],
+  enhancedExpenses: [],
   friendRequests: [],
 };
 
@@ -63,8 +67,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, groups: action.payload };
     case 'CREATE_GROUP':
       return { ...state, groups: [...state.groups, action.payload] };
-    case 'ADD_BILL':
-      return { ...state, bills: [...state.bills, action.payload] };
+
     case 'ADD_EXPENSE':
       return { ...state, expenses: [...state.expenses, action.payload] };
     case 'UPDATE_EXPENSE':
@@ -75,6 +78,22 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             ? { ...expense, ...action.payload.updates }
             : expense
         ),
+      };
+    case 'ADD_ENHANCED_EXPENSE':
+      return { ...state, enhancedExpenses: [...state.enhancedExpenses, action.payload] };
+    case 'UPDATE_ENHANCED_EXPENSE':
+      return {
+        ...state,
+        enhancedExpenses: state.enhancedExpenses.map(expense =>
+          expense.id === action.payload.id
+            ? { ...expense, ...action.payload.updates, updatedAt: new Date() }
+            : expense
+        ),
+      };
+    case 'DELETE_ENHANCED_EXPENSE':
+      return {
+        ...state,
+        enhancedExpenses: state.enhancedExpenses.filter(expense => expense.id !== action.payload),
       };
     default:
       return state;

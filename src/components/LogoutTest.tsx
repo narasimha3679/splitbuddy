@@ -1,34 +1,25 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { showConfirmationAlert, showErrorAlert } from '../utils/alerts';
 
 const LogoutTest: React.FC = () => {
   const { state, logout } = useAuth();
 
   const handleLogout = async () => {
-    Alert.alert(
+    showConfirmationAlert(
       'Logout',
       'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Logging out...');
-              await logout();
-              console.log('Logout successful');
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          console.log('Logging out...');
+          await logout();
+          console.log('Logout successful');
+        } catch (error) {
+          console.error('Logout error:', error);
+          showErrorAlert('Failed to logout. Please try again.');
+        }
+      }
     );
   };
 

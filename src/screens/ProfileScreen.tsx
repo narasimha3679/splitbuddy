@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -15,21 +14,32 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/calculations';
 import LogoutTest from '../components/LogoutTest';
 import Avatar from '../components/Avatar';
+import { showConfirmationAlert } from '../utils/alerts';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { state } = useApp();
-  const { bills, expenses } = state;
+  const { enhancedExpenses } = state;
   const { state: authState, logout } = useAuth();
   const currentUser = authState.user;
 
-  const totalBills = bills.length;
-  const totalOwed = expenses
-    .filter(expense => expense.userId === currentUser?.id && !expense.isPaid)
-    .reduce((sum, expense) => sum + expense.amount, 0);
-  const totalOwedToYou = expenses
-    .filter(expense => expense.userId !== currentUser?.id && !expense.isPaid)
-    .reduce((sum, expense) => sum + expense.amount, 0);
+  // Calculate totals from enhanced expenses
+  const totalBills = enhancedExpenses.length;
+  const totalOwed = enhancedExpenses
+    .filter(expense => {
+      const participant = expense.participants.find(p => p.userId === currentUser?.id);
+      return participant && !participant.isPaid;
+    })
+    .reduce((sum, expense) => {
+      const participant = expense.participants.find(p => p.userId === currentUser?.id);
+      return sum + (participant?.amount || 0);
+    }, 0);
+  const totalOwedToYou = enhancedExpenses
+    .filter(expense => expense.paidBy === currentUser?.id)
+    .reduce((sum, expense) => {
+      const unpaidParticipants = expense.participants.filter(p => !p.isPaid && p.userId !== currentUser?.id);
+      return sum + unpaidParticipants.reduce((participantSum, p) => participantSum + p.amount, 0);
+    }, 0);
 
   const MenuItem = ({
     icon,
@@ -186,22 +196,12 @@ const ProfileScreen: React.FC = () => {
             title="Delete Account"
             subtitle="Permanently delete your account"
             onPress={() => {
-              Alert.alert(
+              showConfirmationAlert(
                 'Delete Account',
                 'Are you sure you want to delete your account? This action cannot be undone.',
-                [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel',
-                  },
-                  {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => {
-                      // Handle account deletion
-                    },
-                  },
-                ]
+                () => {
+                  // Handle account deletion
+                }
               );
             }}
           />
@@ -233,7 +233,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   title: {
-    paddingTop: 20,
     fontSize: 24,
     fontWeight: '700',
     color: '#333',

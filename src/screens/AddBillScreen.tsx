@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   ScrollView,
   FlatList,
   KeyboardAvoidingView,
@@ -17,6 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { Bill, Expense } from '../types';
 import { generateId, formatCurrency } from '../utils/calculations';
+import { showErrorAlert, showSuccessAlert } from '../utils/alerts';
 
 const CATEGORIES = [
   'Food', 'Transport', 'Entertainment', 'Shopping', 'Utilities', 'Other'
@@ -33,11 +33,11 @@ const AddBillScreen: React.FC = () => {
   const route = useRoute();
   const { state, dispatch } = useApp();
   const { friends, groups, currentUser } = state;
-  
+
   // Get pre-selected participants from navigation params
   const preSelectedGroupId = route.params?.groupId;
   const preSelectedFriends = route.params?.friends || [];
-  
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -50,17 +50,17 @@ const AddBillScreen: React.FC = () => {
 
   const handleAddBill = () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a bill title');
+      showErrorAlert('Please enter a bill title');
       return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      showErrorAlert('Please enter a valid amount');
       return;
     }
 
     const participants: string[] = [];
-    
+
     // Add group members if group is selected
     if (selectedGroupId) {
       const group = groups.find(g => g.id === selectedGroupId);
@@ -68,17 +68,17 @@ const AddBillScreen: React.FC = () => {
         participants.push(...group.members.map(m => m.id));
       }
     }
-    
+
     // Add selected friends
     participants.push(...selectedFriends);
-    
+
     // Add current user if not already included
     if (!participants.includes(currentUser?.id || '')) {
       participants.push(currentUser?.id || '');
     }
 
     if (participants.length < 2) {
-      Alert.alert('Error', 'Please select at least one participant');
+      showErrorAlert('Please select at least one participant');
       return;
     }
 
@@ -114,20 +114,11 @@ const AddBillScreen: React.FC = () => {
       }
     });
 
-    Alert.alert(
-      'Success',
-      `Bill "${title}" has been added!`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
-    );
+    showSuccessAlert(`Bill "${title}" has been added!`, () => navigation.goBack());
   };
 
   const toggleFriendSelection = (friendId: string) => {
-    setSelectedFriends(prev => 
+    setSelectedFriends(prev =>
       prev.includes(friendId)
         ? prev.filter(id => id !== friendId)
         : [...prev, friendId]
@@ -136,7 +127,7 @@ const AddBillScreen: React.FC = () => {
 
   const renderFriend = ({ item }: { item: any }) => {
     const isSelected = selectedFriends.includes(item.user.id);
-    
+
     return (
       <TouchableOpacity
         style={[styles.participantItem, isSelected && styles.participantItemSelected]}
@@ -155,7 +146,7 @@ const AddBillScreen: React.FC = () => {
 
   const renderGroup = ({ item }: { item: any }) => {
     const isSelected = selectedGroupId === item.id;
-    
+
     return (
       <TouchableOpacity
         style={[styles.participantItem, isSelected && styles.participantItemSelected]}
@@ -193,7 +184,7 @@ const AddBillScreen: React.FC = () => {
             {/* Bill Details */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Bill Details</Text>
-              
+
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Title *</Text>
                 <TextInput
@@ -287,7 +278,7 @@ const AddBillScreen: React.FC = () => {
             {/* Participants */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Participants</Text>
-              
+
               {groups.length > 0 && (
                 <View style={styles.participantsSubsection}>
                   <Text style={styles.subsectionTitle}>Groups</Text>

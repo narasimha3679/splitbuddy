@@ -22,7 +22,10 @@ const GroupDetailsScreen: React.FC = () => {
   const { state } = useApp();
   const { group } = route.params as { group: Group };
 
-  const groupBills = state.bills.filter(bill => bill.groupId === group.id);
+  // Filter enhanced expenses for this group
+  const groupBills = state.enhancedExpenses.filter(expense =>
+    expense.participants.some(p => p.source === 'group' && p.sourceId === group.id)
+  );
   const groupMembers = group.members;
 
   const renderMember = ({ item }: { item: any }) => (

@@ -6,7 +6,6 @@ import {
     FlatList,
     TouchableOpacity,
     SafeAreaView,
-    Alert,
     RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +14,7 @@ import { useApp } from '../context/AppContext';
 import { FriendRequest } from '../types';
 import { getPendingFriendRequests, acceptFriendRequest, declineFriendRequest, getFriends } from '../utils/api';
 import { getUser } from '../utils/api';
+import { showAlert, showErrorAlert, showSuccessAlert } from '../utils/alerts';
 
 const FriendRequestsScreen: React.FC = () => {
     const navigation = useNavigation();
@@ -26,7 +26,7 @@ const FriendRequestsScreen: React.FC = () => {
         try {
             const currentUser = await getUser();
             if (!currentUser) {
-                Alert.alert('Error', 'User not found');
+                showErrorAlert('User not found');
                 return;
             }
 
@@ -35,7 +35,7 @@ const FriendRequestsScreen: React.FC = () => {
             dispatch({ type: 'SET_FRIEND_REQUESTS', payload: requests });
         } catch (error: any) {
             console.error('Failed to load friend requests:', error);
-            Alert.alert('Error', error.message || 'Failed to load friend requests');
+            showErrorAlert(error.message || 'Failed to load friend requests');
         }
     };
 
@@ -54,9 +54,9 @@ const FriendRequestsScreen: React.FC = () => {
                 dispatch({ type: 'SET_FRIENDS', payload: friends });
             }
 
-            Alert.alert('Success', 'Friend request accepted!');
+            showSuccessAlert('Friend request accepted!');
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to accept request');
+            showErrorAlert(error.message || 'Failed to accept request');
         } finally {
             setLoading(false);
         }
@@ -70,9 +70,9 @@ const FriendRequestsScreen: React.FC = () => {
             // Remove the request from the list
             dispatch({ type: 'REMOVE_FRIEND_REQUEST', payload: request.id });
 
-            Alert.alert('Success', 'Friend request declined');
+            showSuccessAlert('Friend request declined');
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to decline request');
+            showErrorAlert(error.message || 'Failed to decline request');
         } finally {
             setLoading(false);
         }
@@ -96,10 +96,10 @@ const FriendRequestsScreen: React.FC = () => {
                 </View>
                 <View style={styles.userDetails}>
                     <Text style={styles.userName}>
-                        {item.sender?.name || 'Friend Request'}
+                        {item.senderName || 'Friend Request'}
                     </Text>
                     <Text style={styles.userEmail}>
-                        {item.sender?.email || `Request ID: ${item.id.slice(0, 8)}...`}
+                        {item.senderEmail || `Request ID: ${String(item.id).slice(0, 8)}...`}
                     </Text>
                     {item.createdAt && (
                         <Text style={styles.requestDate}>
