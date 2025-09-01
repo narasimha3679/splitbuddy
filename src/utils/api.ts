@@ -337,9 +337,9 @@ export const getFriends = async (userId: string): Promise<Friend[]> => {
 export const getFriendsWithBalances = async (userId: string): Promise<FriendBalance[]> => {
   const baseUrl = await getApiBaseUrl();
   console.log('API: Getting friends with balances for user:', userId);
-  console.log('API: Using URL:', `${baseUrl}/expenses/user/${userId}/balances`);
+  console.log('API: Using URL:', `${baseUrl}/balances/friends`);
 
-  const response = await authenticatedFetch(`${baseUrl}/expenses/user/${userId}/balances`, {
+  const response = await authenticatedFetch(`${baseUrl}/balances/friends`, {
     method: 'GET',
   });
 

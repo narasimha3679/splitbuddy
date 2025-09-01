@@ -14,6 +14,8 @@ import AddFriendScreen from '../screens/AddFriendScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupDetailsScreen from '../screens/GroupDetailsScreen';
 import AddExpenseScreen from '../screens/AddExpenseScreen';
+import AddBillScreen from '../screens/AddBillScreen';
+import BillDetailsScreen from '../screens/BillDetailsScreen';
 import ExpenseDetailsScreen from '../screens/ExpenseDetailsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -45,6 +47,18 @@ const FriendsStack = () => (
       component={FriendDetailsScreen}
     />
     <Stack.Screen
+      name="AddExpense"
+      component={AddExpenseScreen}
+    />
+    <Stack.Screen
+      name="AddBill"
+      component={AddBillScreen}
+    />
+    <Stack.Screen
+      name="BillDetails"
+      component={BillDetailsScreen}
+    />
+    <Stack.Screen
       name="ExpenseDetails"
       component={ExpenseDetailsScreen}
     />
@@ -66,6 +80,18 @@ const GroupsStack = () => (
       component={GroupDetailsScreen}
     />
     <Stack.Screen
+      name="AddExpense"
+      component={AddExpenseScreen}
+    />
+    <Stack.Screen
+      name="AddBill"
+      component={AddBillScreen}
+    />
+    <Stack.Screen
+      name="BillDetails"
+      component={BillDetailsScreen}
+    />
+    <Stack.Screen
       name="ExpenseDetails"
       component={ExpenseDetailsScreen}
     />
@@ -82,7 +108,14 @@ const ActivitiesStack = () => (
       name="AddExpense"
       component={AddExpenseScreen}
     />
-
+    <Stack.Screen
+      name="AddBill"
+      component={AddBillScreen}
+    />
+    <Stack.Screen
+      name="BillDetails"
+      component={BillDetailsScreen}
+    />
     <Stack.Screen
       name="ExpenseDetails"
       component={ExpenseDetailsScreen}

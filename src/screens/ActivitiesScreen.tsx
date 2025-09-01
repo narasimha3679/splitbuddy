@@ -15,6 +15,7 @@ import { useApp } from '../context/AppContext';
 import { Expense } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import ExpenseCard from '../components/ExpenseCard';
+import FloatingActionButton from '../components/FloatingActionButton';
 import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 const ActivitiesScreen = () => {
@@ -116,6 +117,11 @@ const ActivitiesScreen = () => {
                 }
                 ListEmptyComponent={renderEmptyState}
             />
+
+            <FloatingActionButton
+                onPress={() => navigation.navigate('AddExpense')}
+                icon="add"
+            />
         </SafeAreaView>
     );
 };
@@ -201,6 +207,7 @@ const styles = StyleSheet.create({
     listContainer: {
         padding: 20,
         paddingTop: 12,
+        paddingBottom: 100, // Space for FAB
     },
     emptyState: {
         flex: 1,

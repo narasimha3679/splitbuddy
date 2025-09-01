@@ -20,6 +20,7 @@ type GroupDetailsScreenRouteProp = RouteProp<RootStackParamList, 'GroupDetails'>
 import BillCard from '../components/BillCard';
 import FriendCard from '../components/FriendCard';
 import Avatar from '../components/Avatar';
+import FloatingActionButton from '../components/FloatingActionButton';
 import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
 const GroupDetailsScreen: React.FC = () => {
@@ -156,6 +157,11 @@ const GroupDetailsScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
+
+      <FloatingActionButton
+        onPress={() => navigation.navigate('AddBill', { groupId: group.id })}
+        icon="add"
+      />
     </SafeAreaView>
   );
 };

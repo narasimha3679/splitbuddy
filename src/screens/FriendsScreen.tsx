@@ -16,6 +16,7 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { getTotalOwed, formatCurrency } from '../utils/calculations';
 import FriendCard from '../components/FriendCard';
+import FloatingActionButton from '../components/FloatingActionButton';
 import { getFriendsWithBalances, getPendingFriendRequests, getUser } from '../utils/api';
 import { showErrorAlert } from '../utils/alerts';
 import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
@@ -177,6 +178,11 @@ const FriendsScreen: React.FC = () => {
       ) : (
         renderEmptyState()
       )}
+
+      <FloatingActionButton
+        onPress={() => navigation.navigate('AddExpense')}
+        icon="add"
+      />
     </SafeAreaView>
   );
 };
@@ -239,6 +245,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingVertical: 8,
+    paddingBottom: 100, // Space for FAB
   },
   emptyState: {
     flex: 1,

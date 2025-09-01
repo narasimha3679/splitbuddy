@@ -21,6 +21,7 @@ import { getFriendExpenses } from '../utils/api';
 import { showErrorAlert } from '../utils/alerts';
 import Avatar from '../components/Avatar';
 import FriendExpenseCard from '../components/FriendExpenseCard';
+import FloatingActionButton from '../components/FloatingActionButton';
 import { formatCurrency } from '../utils/calculations';
 import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
@@ -48,9 +49,10 @@ const FriendDetailsScreen: React.FC = () => {
     const [expenseData, setExpenseData] = useState<FriendExpenseData | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
+    // Only keep scroll animation for subtle header effects
     const scrollY = new Animated.Value(0);
+
     const user = useMemo(() => friend.user || friend, [friend]);
 
     // Optimized data loading with better error handling
@@ -98,11 +100,12 @@ const FriendDetailsScreen: React.FC = () => {
         const isPositive = balance > 0;
         const isNegative = balance < 0;
 
+
         return {
             amount: Math.abs(balance),
-            color: isPositive ? '#22C55E' : isNegative ? '#EF4444' : '#6B7280',
+            color: isPositive ? '#10B981' : isNegative ? '#EF4444' : '#6B7280',
             text: isPositive ? 'owes you' : isNegative ? 'you owe' : 'settled up',
-            bgColor: isPositive ? '#DCFCE7' : isNegative ? '#FEE2E2' : '#F3F4F6',
+            bgColor: isPositive ? '#ECFDF5' : isNegative ? '#FEF2F2' : '#F9FAFB',
             icon: isPositive ? 'trending-up' as const : isNegative ? 'trending-down' as const : 'checkmark-circle' as const
         };
     }, [expenseData?.netBalance]);
@@ -127,20 +130,7 @@ const FriendDetailsScreen: React.FC = () => {
     }, [expenseData?.sharedExpenses]);
 
     const renderExpense = ({ item, index }: { item: Expense; index: number }) => (
-        <Animated.View
-            style={[
-                styles.expenseCard,
-                {
-                    transform: [{
-                        translateY: scrollY.interpolate({
-                            inputRange: [0, 100],
-                            outputRange: [0, -index * 2],
-                            extrapolate: 'clamp',
-                        })
-                    }]
-                }
-            ]}
-        >
+        <View style={styles.expenseCard}>
             <FriendExpenseCard
                 expense={item}
                 currentUserId={currentUser?.id || ''}
@@ -150,13 +140,13 @@ const FriendDetailsScreen: React.FC = () => {
                     friendId: user.id
                 })}
             />
-        </Animated.View>
+        </View>
     );
 
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
-                <Ionicons name="receipt-outline" size={48} color="#9CA3AF" />
+                <Ionicons name="receipt-outline" size={40} color="#9CA3AF" />
             </View>
             <Text style={styles.emptyStateTitle}>No shared expenses yet</Text>
             <Text style={styles.emptyStateSubtitle}>
@@ -167,7 +157,7 @@ const FriendDetailsScreen: React.FC = () => {
                 onPress={() => navigation.navigate('AddExpense', { friends: [user.id] })}
                 activeOpacity={0.8}
             >
-                <Ionicons name="add-circle" size={20} color="white" />
+                <Ionicons name="add-circle" size={18} color="white" />
                 <Text style={styles.primaryButtonText}>Add First Expense</Text>
             </TouchableOpacity>
         </View>
@@ -178,8 +168,9 @@ const FriendDetailsScreen: React.FC = () => {
             <TouchableOpacity
                 style={[styles.actionButton, styles.primaryAction]}
                 onPress={() => navigation.navigate('AddExpense', { friends: [user.id] })}
+                activeOpacity={0.8}
             >
-                <Ionicons name="add" size={18} color="white" />
+                <Ionicons name="add" size={16} color="white" />
                 <Text style={styles.actionButtonText}>Add Expense</Text>
             </TouchableOpacity>
 
@@ -190,8 +181,9 @@ const FriendDetailsScreen: React.FC = () => {
                         // TODO: Implement settle up functionality
                         console.log('Settle up with', user.id);
                     }}
+                    activeOpacity={0.8}
                 >
-                    <Ionicons name="card" size={18} color="#007AFF" />
+                    <Ionicons name="card" size={16} color="#007AFF" />
                     <Text style={[styles.actionButtonText, { color: '#007AFF' }]}>
                         Settle Up
                     </Text>
@@ -220,7 +212,7 @@ const FriendDetailsScreen: React.FC = () => {
                     {
                         shadowOpacity: scrollY.interpolate({
                             inputRange: [0, 50],
-                            outputRange: [0, 0.1],
+                            outputRange: [0, 0.08],
                             extrapolate: 'clamp',
                         })
                     }
@@ -231,7 +223,7 @@ const FriendDetailsScreen: React.FC = () => {
                     onPress={() => navigation.goBack()}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    <Ionicons name="chevron-back" size={24} color="#007AFF" />
+                    <Ionicons name="chevron-back" size={22} color="#007AFF" />
                 </TouchableOpacity>
 
                 <Animated.Text
@@ -239,7 +231,7 @@ const FriendDetailsScreen: React.FC = () => {
                         styles.headerTitle,
                         {
                             opacity: scrollY.interpolate({
-                                inputRange: [0, 100],
+                                inputRange: [0, 80],
                                 outputRange: [0, 1],
                                 extrapolate: 'clamp',
                             })
@@ -253,7 +245,7 @@ const FriendDetailsScreen: React.FC = () => {
                     style={styles.headerAction}
                     onPress={() => {/* More options */ }}
                 >
-                    <Ionicons name="ellipsis-horizontal" size={20} color="#007AFF" />
+                    <Ionicons name="ellipsis-horizontal" size={18} color="#007AFF" />
                 </TouchableOpacity>
             </Animated.View>
 
@@ -272,67 +264,48 @@ const FriendDetailsScreen: React.FC = () => {
                     />
                 }
             >
-                {/* Friend Profile Section */}
+                {/* Compact Friend Profile Section */}
                 <View style={styles.profileSection}>
-                    <View style={styles.avatarContainer}>
+                    <View style={styles.profileRow}>
                         <Avatar
                             name={user.name}
-                            size={80}
+                            size={56}
                             type="user"
                             customAvatar={user.avatar}
                         />
-                        <View style={styles.onlineIndicator} />
-                    </View>
+                        <View style={styles.profileInfo}>
+                            <Text style={styles.userName}>{user.name}</Text>
 
-                    <Text style={styles.userName}>{user.name}</Text>
-                    <Text style={styles.userEmail}>{user.email}</Text>
+                        </View>
+                    </View>
                 </View>
 
-                {/* Balance Overview - Redesigned */}
+                {/* Compact Balance Overview */}
                 <View style={styles.balanceSection}>
                     <View style={[styles.balanceCard, { backgroundColor: balanceInfo.bgColor }]}>
-                        <View style={styles.balanceHeader}>
-                            <Ionicons
-                                name={balanceInfo.icon}
-                                size={24}
-                                color={balanceInfo.color}
-                            />
-                            <Text style={styles.balanceLabel}>Current Balance</Text>
+                        <View style={styles.balanceContent}>
+                            <View style={styles.balanceLeft}>
+                                {/* <View style={styles.balanceIconContainer}>
+                                    <Ionicons
+                                        name={balanceInfo.icon}
+                                        size={20}
+                                        color={balanceInfo.color}
+                                    />
+                                </View> */}
+                                <View style={styles.balanceTextContainer}>
+                                    {/*   <Text style={styles.balanceLabel}>Current Balance</Text> */}
+                                    <Text style={[styles.balanceDescription, { color: balanceInfo.color }]}>
+                                        {balanceInfo.amount > 0 ? `${balanceInfo.text}` : 'All settled up! 🎉'}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text style={[styles.balanceAmount, { color: balanceInfo.color }]}>
+                                {balanceInfo.amount > 0 && formatCurrency(balanceInfo.amount, 'USD')}
+                                {balanceInfo.amount === 0 && '—'}
+                            </Text>
                         </View>
-
-                        <Text style={[styles.balanceAmount, { color: balanceInfo.color }]}>
-                            {balanceInfo.amount > 0 && formatCurrency(balanceInfo.amount, 'USD')}
-                            {balanceInfo.amount === 0 && '—'}
-                        </Text>
-
-                        <Text style={[styles.balanceDescription, { color: balanceInfo.color }]}>
-                            {balanceInfo.amount > 0 ? `${user.name} ${balanceInfo.text}` : 'All settled up! 🎉'}
-                        </Text>
                     </View>
 
-                    {/* Quick Stats */}
-                    {expenseStats.count > 0 && (
-                        <View style={styles.statsRow}>
-                            <View style={styles.statItem}>
-                                <Text style={styles.statValue}>{expenseStats.count}</Text>
-                                <Text style={styles.statLabel}>Expenses</Text>
-                            </View>
-                            <View style={styles.statDivider} />
-                            <View style={styles.statItem}>
-                                <Text style={styles.statValue}>
-                                    {formatCurrency(expenseStats.total, 'USD')}
-                                </Text>
-                                <Text style={styles.statLabel}>Total Shared</Text>
-                            </View>
-                            <View style={styles.statDivider} />
-                            <View style={styles.statItem}>
-                                <Text style={styles.statValue}>
-                                    {formatCurrency(expenseStats.avgAmount || 0, 'USD')}
-                                </Text>
-                                <Text style={styles.statLabel}>Avg Amount</Text>
-                            </View>
-                        </View>
-                    )}
                 </View>
 
                 {/* Quick Actions */}
@@ -345,7 +318,7 @@ const FriendDetailsScreen: React.FC = () => {
                         {expenseStats.count > 0 && (
                             <TouchableOpacity style={styles.viewAllButton}>
                                 <Text style={styles.viewAllText}>View All</Text>
-                                <Ionicons name="chevron-forward" size={16} color="#007AFF" />
+                                <Ionicons name="chevron-forward" size={14} color="#007AFF" />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -362,6 +335,11 @@ const FriendDetailsScreen: React.FC = () => {
                     )}
                 </View>
             </ScrollView>
+
+            <FloatingActionButton
+                onPress={() => navigation.navigate('AddExpense', { friends: [user.id] })}
+                icon="add"
+            />
         </SafeAreaView>
     );
 };
@@ -425,32 +403,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginBottom: 12,
     },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: 16,
+    profileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    onlineIndicator: {
-        position: 'absolute',
-        bottom: 4,
-        right: 4,
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: '#22C55E',
-        borderWidth: 3,
-        borderColor: 'white',
+    profileInfo: {
+        marginLeft: 16,
+
     },
     userName: {
         fontSize: 24,
         fontWeight: '700',
         color: '#1F2937',
         marginBottom: 4,
-        textAlign: 'center',
     },
     userEmail: {
         fontSize: 16,
         color: '#6B7280',
-        textAlign: 'center',
     },
 
     // Balance Section - Completely redesigned
@@ -468,27 +437,44 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
     },
-    balanceHeader: {
+    balanceContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    balanceLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        flex: 1,
+        marginRight: 16,
+    },
+    balanceIconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#E0F2FE',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    balanceTextContainer: {
+        flex: 1,
     },
     balanceLabel: {
         fontSize: 16,
         fontWeight: '600',
         color: '#374151',
-        marginLeft: 8,
-    },
-    balanceAmount: {
-        fontSize: 32,
-        fontWeight: '800',
         marginBottom: 4,
-        textAlign: 'center',
     },
     balanceDescription: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '500',
-        textAlign: 'center',
+    },
+    balanceAmount: {
+        fontSize: 24,
+        fontWeight: '800',
+        textAlign: 'right',
+        flexShrink: 1,
     },
 
     // Stats Row

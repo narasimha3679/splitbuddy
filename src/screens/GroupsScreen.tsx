@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import GroupCard from '../components/GroupCard';
+import FloatingActionButton from '../components/FloatingActionButton';
 import { getMyGroups } from '../utils/api';
 import { getContainerTopPadding, getHeaderTopPadding } from '../utils/statusBar';
 
@@ -108,6 +109,11 @@ const GroupsScreen: React.FC = () => {
       ) : (
         renderEmptyState()
       )}
+
+      <FloatingActionButton
+        onPress={() => (navigation as any).navigate('AddExpense')}
+        icon="add"
+      />
     </SafeAreaView >
   );
 };
@@ -143,6 +149,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingVertical: 8,
+    paddingBottom: 100, // Space for FAB
   },
   emptyState: {
     flex: 1,
